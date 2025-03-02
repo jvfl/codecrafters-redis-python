@@ -1,5 +1,9 @@
-import socket  # noqa: F401
 import asyncio  # noqa: F401
+
+from .protocol import ArrayCodec, BulkStringCodec
+
+ARRAY_CODEC = ArrayCodec()
+STRING_CODEC = BulkStringCodec()
 
 
 async def handle_callback(
@@ -8,16 +12,21 @@ async def handle_callback(
     print("Logs from your program will appear here!")
 
     while True:
-        raw_command = await reader.read(100)
-        command = raw_command.decode()
+        raw_command = (await reader.read(100)).decode()
+        print("Command:", raw_command)
 
-        if command == "":
+        if raw_command == "":
             break
 
-        pings = [ping for ping in command.splitlines() if ping == "PING"]
+        commandAndArgs = ARRAY_CODEC.decode(raw_command)
+        command = commandAndArgs[0]
 
-        for _ in pings:
+        if command == "PING":
             writer.write(b"+PONG\r\n")
+            await writer.drain()
+        elif command == "ECHO":
+            encoded_string = STRING_CODEC.encode(commandAndArgs[1])
+            writer.write(encoded_string.encode("utf-8"))
             await writer.drain()
 
     writer.close()
