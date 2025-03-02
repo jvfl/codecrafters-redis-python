@@ -1,7 +1,7 @@
-from ._resp_codec_interface import RESPCodecInterface
+from typing import Optional
 
 
-class BulkStringCodec(RESPCodecInterface):
+class BulkStringCodec:
     """
     A bulk string represents a single binary string.
 
@@ -38,8 +38,11 @@ class BulkStringCodec(RESPCodecInterface):
 
         return data.split("\r\n")[1]
 
-    def encode(self, data: str) -> str:
+    def encode(self, data: Optional[str]) -> str:
         """
         Encode a string into a RESP message as bulk string
         """
+        if data is None:
+            return "$-1\r\n"
+
         return f"${len(data)}\r\n{data}\r\n"

@@ -29,3 +29,7 @@ class TestBulkStringParser:
         class TestWhenDataIsEmpty:
             def test_it_encodes_the_data(self, subject: BulkStringCodec) -> None:
                 assert subject.encode("") == "$0\r\n\r\n"
+
+        class TestWhenDataIsNull:
+            def test_it_encodes_the_data(self, subject: BulkStringCodec) -> None:
+                assert subject.encode(None) == "$-1\r\n"
