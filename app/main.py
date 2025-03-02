@@ -1,12 +1,15 @@
 import asyncio
 from typing import Any
 
-from .protocol import ArrayCodec, BulkStringCodec
+from app.protocol import ArrayCodec, BulkStringCodec
+from app.commands import SetCommandHandler
 
 ARRAY_CODEC = ArrayCodec()
 STRING_CODEC = BulkStringCodec()
 
 MEMORY: dict[str, Any] = {}
+
+SET_COMMAND_HANDLER = SetCommandHandler(MEMORY)
 
 
 async def handle_callback(
@@ -32,15 +35,11 @@ async def handle_callback(
             writer.write(encoded_string.encode("utf-8"))
             await writer.drain()
         elif command == "SET":
-            key = commandAndArgs[1]
-            value = commandAndArgs[2]
-            MEMORY[key] = value
-            writer.write(b"+OK\r\n")
-            await writer.drain()
+            await SET_COMMAND_HANDLER.handle(commandAndArgs, writer)
         elif command == "GET":
             key = commandAndArgs[1]
 
-            if MEMORY.get(key) is not None:
+            if value := MEMORY.get(key):
                 encoded_string = STRING_CODEC.encode(value)
                 writer.write(encoded_string.encode("utf-8"))
             else:
