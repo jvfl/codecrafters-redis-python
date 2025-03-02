@@ -1,9 +1,12 @@
-import asyncio  # noqa: F401
+import asyncio
+from typing import Any
 
 from .protocol import ArrayCodec, BulkStringCodec
 
 ARRAY_CODEC = ArrayCodec()
 STRING_CODEC = BulkStringCodec()
+
+MEMORY: dict[str, Any] = {}
 
 
 async def handle_callback(
@@ -27,6 +30,21 @@ async def handle_callback(
         elif command == "ECHO":
             encoded_string = STRING_CODEC.encode(commandAndArgs[1])
             writer.write(encoded_string.encode("utf-8"))
+            await writer.drain()
+        elif command == "SET":
+            key = commandAndArgs[1]
+            value = commandAndArgs[2]
+            MEMORY[key] = value
+            writer.write(b"+OK\r\n")
+            await writer.drain()
+        elif command == "GET":
+            key = commandAndArgs[1]
+
+            if MEMORY.get(key) is not None:
+                encoded_string = STRING_CODEC.encode(value)
+                writer.write(encoded_string.encode("utf-8"))
+            else:
+                writer.write(b"$-1\r\n")
             await writer.drain()
 
     writer.close()
