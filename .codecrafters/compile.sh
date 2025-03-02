@@ -8,4 +8,5 @@
 
 set -e # Exit on failure
 
+pip install typer
 # (This file is empty since Python programs don't use a compile step)

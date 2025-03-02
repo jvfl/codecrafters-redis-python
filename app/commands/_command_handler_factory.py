@@ -4,11 +4,13 @@ from ._set_command_handler import SetCommandHandler
 from ._ping_command_handler import PingCommandHandler
 from ._echo_command_handler import EchoCommandHandler
 from ._get_command_handler import GetCommandHandler
+from ._config_command_handler import ConfigCommandHandler
 
 
 class CommandHandlerFactory:
-    def __init__(self, memory: dict[str, Any]) -> None:
+    def __init__(self, memory: dict[str, Any], config_memory: dict[str, Any]) -> None:
         self.memory = memory
+        self.config_memory = config_memory
 
     def create(self, command: str) -> CommandHandler:
         if command == "ECHO":
@@ -19,5 +21,7 @@ class CommandHandlerFactory:
             return SetCommandHandler(self.memory)
         elif command == "PING":
             return PingCommandHandler()
+        elif command == "CONFIG":
+            return ConfigCommandHandler(self.config_memory)
         else:
             raise NotImplementedError(f"Command {command} is not supported")
