@@ -1,3 +1,3 @@
-from ._set_command_handler import SetCommandHandler
+from ._command_handler_factory import CommandHandlerFactory
 
-__all__ = ["SetCommandHandler"]
+__all__ = ["CommandHandlerFactory"]

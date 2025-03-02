@@ -1,15 +1,14 @@
 import asyncio
 from typing import Any
 
-from app.protocol import ArrayCodec, BulkStringCodec
-from app.commands import SetCommandHandler
+from app.protocol import ArrayCodec
+from app.commands import CommandHandlerFactory
 
 ARRAY_CODEC = ArrayCodec()
-STRING_CODEC = BulkStringCodec()
 
 MEMORY: dict[str, Any] = {}
 
-SET_COMMAND_HANDLER = SetCommandHandler(MEMORY)
+COMMAND_HANDLER_FACTORY = CommandHandlerFactory(MEMORY)
 
 
 async def handle_callback(
@@ -26,25 +25,9 @@ async def handle_callback(
 
         commandAndArgs = ARRAY_CODEC.decode(raw_command)
         command = commandAndArgs[0]
+        args = commandAndArgs[1:]
 
-        if command == "PING":
-            writer.write(b"+PONG\r\n")
-            await writer.drain()
-        elif command == "ECHO":
-            encoded_string = STRING_CODEC.encode(commandAndArgs[1])
-            writer.write(encoded_string.encode("utf-8"))
-            await writer.drain()
-        elif command == "SET":
-            await SET_COMMAND_HANDLER.handle(commandAndArgs, writer)
-        elif command == "GET":
-            key = commandAndArgs[1]
-
-            if value := MEMORY.get(key):
-                encoded_string = STRING_CODEC.encode(value)
-                writer.write(encoded_string.encode("utf-8"))
-            else:
-                writer.write(b"$-1\r\n")
-            await writer.drain()
+        await COMMAND_HANDLER_FACTORY.create(command).handle(args, writer)
 
     writer.close()
     await writer.wait_closed()
