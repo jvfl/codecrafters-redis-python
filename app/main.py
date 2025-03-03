@@ -1,13 +1,14 @@
 import asyncio
 import typer
 import uvloop
+import time
 
 from typing import Any, Optional
 from pathlib import Path
 
 from app.protocol import ArrayCodec
 from app.commands import CommandHandlerFactory
-from app.storage.rdb import RDBReader
+from app.storage.rdb import RDBReader, RDBData
 
 
 APP = typer.Typer()
@@ -42,7 +43,19 @@ async def handle_callback(
     await writer.wait_closed()
 
 
-async def run_server(host: str, port: int) -> None:
+async def run_server(host: str, port: int, data: RDBData) -> None:
+    for key, value in data.hash_table.items():
+        value, expiry = value
+        MEMORY[key] = value
+        if expiry is not None:
+            expiry_time = expiry - round(time.time() * 1000)
+
+            print(key, expiry, expiry_time)
+            asyncio.create_task(_expire_key(key, expiry_time))
+
+    print("Server started with the following memory:")
+    print(MEMORY)
+
     server = await asyncio.start_server(handle_callback, host, port)
     async with server:
         await server.serve_forever()
@@ -68,13 +81,22 @@ def main(
         )
         if dbfilename_path.exists():
             data = RDBReader(dbfilename_path).read()
-            MEMORY.update(data.hash_table)
+            print("Data read from RDB file:")
+            print(data)
+        else:
+            data = RDBData([], {})
+            print("No RDB file found")
 
-        uvloop.run(run_server("localhost", 6379))
+        uvloop.run(run_server("localhost", 6379, data))
     except KeyboardInterrupt:
         print("\nShutting down server...")
     except Exception as e:
         print(f"Error running server: {e}")
+
+
+async def _expire_key(key: str, delay_ms: int) -> None:
+    await asyncio.sleep(delay_ms / 1000.0)  # Convert ms to seconds
+    MEMORY.pop(key, None)
 
 
 if __name__ == "__main__":

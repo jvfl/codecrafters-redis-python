@@ -1,4 +1,5 @@
 import struct
+
 from typing import Tuple, Union
 from pathlib import Path
 
@@ -11,6 +12,10 @@ class RDBReader:
     SELECTDB_HEADER = b"\xfe"
     RESIZEDB_HEADER = b"\xfb"
     END_HEADER = b"\xff"
+
+    STRING_TYPE_HEADER = b"\x00"
+    EXPIRES_SECONDS_HEADER = b"\xfd"
+    EXPIRES_MILLIS_HEADER = b"\xfc"
 
     SIGNED_INT_8 = 0
     SIGNED_INT_16 = 1
@@ -43,10 +48,18 @@ class RDBReader:
             next_section = self.file.read(1)
 
         hash_table = {}
-        while next_section == b"\x00":
-            key = self.read_string()
-            value = self.read_string()
-            hash_table[key] = value
+        expiry = None
+        while len(hash_table.keys()) < hash_table_size:
+            if next_section == self.STRING_TYPE_HEADER:
+                key = self.read_string()
+                value = self.read_string()
+
+                hash_table[key] = (value, expiry)
+                expiry = None
+            if next_section == self.EXPIRES_SECONDS_HEADER:
+                expiry = struct.unpack("I", self.file.read(4))[0] * 1000
+            if next_section == self.EXPIRES_MILLIS_HEADER:
+                expiry = struct.unpack("Q", self.file.read(8))[0]
 
             next_section = self.file.read(1)
 
