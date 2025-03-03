@@ -20,12 +20,20 @@ class InfoCommandHandler(CommandHandler):
 
     async def handle_replication(self, writer: StreamWriter) -> None:
 
+        replication_info = ["# Replication"]
+
         role = "master"
         if self.config.replicaof:
             role = "slave"
 
-        replication_info = "\r\n".join(["# Replication", f"role:{role}"])
+        replication_info.append(f"role:{role}")
 
-        response = STRING_CODEC.encode(replication_info + "\r\n")
+        if role == "master":
+            replication_info.append(f"master_replid:{self.config.master_replid}")
+            replication_info.append(
+                f"master_repl_offset:{self.config.master_repl_offset}"
+            )
+
+        response = STRING_CODEC.encode("\r\n".join(replication_info) + "\r\n")
         writer.write(response.encode("utf-8"))
         await writer.drain()
