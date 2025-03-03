@@ -1,16 +1,17 @@
-from app.commands._command_handler import CommandHandler
 from asyncio import StreamWriter
-from typing import Any
+from dataclasses import asdict
 
-from app.protocol import BulkStringCodec, ArrayCodec
+from app.server import RedisConfig
+from app.protocol import ArrayCodec
 
-STRING_CODEC = BulkStringCodec()
+from ._command_handler import CommandHandler
+
 ARRAY_CODEC = ArrayCodec()
 
 
 class ConfigCommandHandler(CommandHandler):
-    def __init__(self, memory: dict[Any, Any]):
-        self.memory = memory
+    def __init__(self, config: RedisConfig):
+        self.config = asdict(config)
 
     async def handle(self, args: list[str], writer: StreamWriter) -> None:
         subcommand = args[0]
@@ -21,6 +22,6 @@ class ConfigCommandHandler(CommandHandler):
     async def handle_get(self, args: list[str], writer: StreamWriter) -> None:
         config_key = args[0]
 
-        response = ARRAY_CODEC.encode([config_key, self.memory[config_key]])
+        response = ARRAY_CODEC.encode([config_key, self.config[config_key]])
         writer.write(response.encode("utf-8"))
         await writer.drain()

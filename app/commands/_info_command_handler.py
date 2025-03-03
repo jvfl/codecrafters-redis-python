@@ -1,16 +1,17 @@
-from app.commands._command_handler import CommandHandler
 from asyncio import StreamWriter
-from typing import Any
+from dataclasses import asdict
 
-from app.protocol import BulkStringCodec, ArrayCodec
+from app.protocol import BulkStringCodec
+from app.server import RedisConfig
+
+from ._command_handler import CommandHandler
 
 STRING_CODEC = BulkStringCodec()
-ARRAY_CODEC = ArrayCodec()
 
 
 class InfoCommandHandler(CommandHandler):
-    def __init__(self, memory: dict[Any, Any]):
-        self.memory = memory
+    def __init__(self, config: RedisConfig):
+        self.config = asdict(config)
 
     async def handle(self, args: list[str], writer: StreamWriter) -> None:
         subcommand = args[0].upper()

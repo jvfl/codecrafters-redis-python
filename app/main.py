@@ -1,62 +1,25 @@
 import asyncio
 import typer
 import uvloop
-import time
 
-from typing import Any, Optional
-from pathlib import Path
+from typing import Optional
 
-from app.protocol import ArrayCodec
-from app.commands import CommandHandlerFactory
-from app.storage.rdb import RDBReader, RDBData
+from app.server import RedisServer, RedisConfig
+from app.storage.keys import InMemoryKeysStorage
 
 
 APP = typer.Typer()
 
-ARRAY_CODEC = ArrayCodec()
 
-MEMORY: dict[str, Any] = {}
-CONFIG_MEMORY: dict[str, Any] = {}
-
-COMMAND_HANDLER_FACTORY = CommandHandlerFactory(MEMORY, CONFIG_MEMORY)
-
-
-async def handle_callback(
-    reader: asyncio.StreamReader, writer: asyncio.StreamWriter
-) -> None:
-    print("Logs from your program will appear here!")
-
-    while True:
-        raw_command = (await reader.read(100)).decode()
-        print("Command:", raw_command)
-
-        if raw_command == "":
-            break
-
-        commandAndArgs = ARRAY_CODEC.decode(raw_command)
-        command = commandAndArgs[0].upper()
-        args = commandAndArgs[1:]
-
-        await COMMAND_HANDLER_FACTORY.create(command).handle(args, writer)
-
-    writer.close()
-    await writer.wait_closed()
-
-
-async def run_server(host: str, port: int, data: RDBData) -> None:
-    for key, value in data.hash_table.items():
-        value, expiry = value
-        MEMORY[key] = value
-        if expiry is not None:
-            expiry_time = expiry - round(time.time() * 1000)
-
-            print(key, expiry, expiry_time)
-            asyncio.create_task(_expire_key(key, expiry_time))
-
+async def run_server(redis_server: RedisServer) -> None:
     print("Server started with the following memory:")
-    print(MEMORY)
+    print(redis_server.keys_storage)
 
-    server = await asyncio.start_server(handle_callback, host, port)
+    await redis_server.load_rdb_data()
+
+    server = await asyncio.start_server(
+        redis_server.handle_callback, redis_server.config.host, redis_server.config.port
+    )
     async with server:
         await server.serve_forever()
 
@@ -72,32 +35,15 @@ def main(
         print(f"dir: {dir}")
         print(f"dbfilename: {dbfilename}")
 
-        if dir is not None:
-            CONFIG_MEMORY["dir"] = dir
-        if dbfilename is not None:
-            CONFIG_MEMORY["dbfilename"] = dbfilename
-
-        dbfilename_path = Path(
-            f"{CONFIG_MEMORY.get('dir')}/{CONFIG_MEMORY.get('dbfilename')}"
+        server = RedisServer(
+            RedisConfig("localhost", port, dir, dbfilename), InMemoryKeysStorage()
         )
-        if dbfilename_path.exists():
-            data = RDBReader(dbfilename_path).read()
-            print("Data read from RDB file:")
-            print(data)
-        else:
-            data = RDBData([], {})
-            print("No RDB file found")
 
-        uvloop.run(run_server("localhost", port, data))
+        uvloop.run(run_server(server))
     except KeyboardInterrupt:
         print("\nShutting down server...")
     except Exception as e:
         print(f"Error running server: {e}")
-
-
-async def _expire_key(key: str, delay_ms: int) -> None:
-    await asyncio.sleep(delay_ms / 1000.0)  # Convert ms to seconds
-    MEMORY.pop(key, None)
 
 
 if __name__ == "__main__":

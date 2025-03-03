@@ -1,4 +1,6 @@
-from typing import Any
+from app.storage.keys import KeysStorage
+from app.server import RedisConfig
+
 from ._command_handler import CommandHandler
 from ._set_command_handler import SetCommandHandler
 from ._ping_command_handler import PingCommandHandler
@@ -10,24 +12,24 @@ from ._info_command_handler import InfoCommandHandler
 
 
 class CommandHandlerFactory:
-    def __init__(self, memory: dict[str, Any], config_memory: dict[str, Any]) -> None:
-        self.memory = memory
-        self.config_memory = config_memory
+    def __init__(self, keys_storage: KeysStorage, config: RedisConfig) -> None:
+        self.keys_storage = keys_storage
+        self.config = config
 
     def create(self, command: str) -> CommandHandler:
         if command == "ECHO":
             return EchoCommandHandler()
         elif command == "GET":
-            return GetCommandHandler(self.memory)
+            return GetCommandHandler(self.keys_storage)
         elif command == "SET":
-            return SetCommandHandler(self.memory)
+            return SetCommandHandler(self.keys_storage)
         elif command == "PING":
             return PingCommandHandler()
         elif command == "CONFIG":
-            return ConfigCommandHandler(self.config_memory)
+            return ConfigCommandHandler(self.config)
         elif command == "KEYS":
-            return KeysCommandHandler(self.memory)
+            return KeysCommandHandler(self.keys_storage)
         elif command == "INFO":
-            return InfoCommandHandler(self.memory)
+            return InfoCommandHandler(self.config)
         else:
             raise NotImplementedError(f"Command {command} is not supported")
