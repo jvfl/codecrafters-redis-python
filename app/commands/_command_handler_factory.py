@@ -6,6 +6,7 @@ from ._echo_command_handler import EchoCommandHandler
 from ._get_command_handler import GetCommandHandler
 from ._config_command_handler import ConfigCommandHandler
 from ._keys_command_handler import KeysCommandHandler
+from ._info_command_handler import InfoCommandHandler
 
 
 class CommandHandlerFactory:
@@ -26,5 +27,7 @@ class CommandHandlerFactory:
             return ConfigCommandHandler(self.config_memory)
         elif command == "KEYS":
             return KeysCommandHandler(self.memory)
+        elif command == "INFO":
+            return InfoCommandHandler(self.memory)
         else:
             raise NotImplementedError(f"Command {command} is not supported")
