@@ -65,6 +65,7 @@ async def run_server(host: str, port: int, data: RDBData) -> None:
 def main(
     dir: Optional[str] = typer.Option(None),
     dbfilename: Optional[str] = typer.Option(None),
+    port: int = typer.Option(6379),
 ):
     try:
         print("Starting server with options:")
@@ -87,7 +88,7 @@ def main(
             data = RDBData([], {})
             print("No RDB file found")
 
-        uvloop.run(run_server("localhost", 6379, data))
+        uvloop.run(run_server("localhost", port, data))
     except KeyboardInterrupt:
         print("\nShutting down server...")
     except Exception as e:
