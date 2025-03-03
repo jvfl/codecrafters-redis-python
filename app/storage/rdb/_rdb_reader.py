@@ -43,7 +43,7 @@ class RDBReader:
             next_section = self.file.read(1)
 
         hash_table = {}
-        if next_section == b"\x00":
+        while next_section == b"\x00":
             key = self.read_string()
             value = self.read_string()
             hash_table[key] = value
