@@ -16,6 +16,13 @@ class TestArrayParser:
                     "mylist",
                 ]
 
+        class TestWhenArrayHasKeysArgument:
+            def test_it_returns_the_parsed_array(self, subject: ArrayCodec) -> None:
+                assert subject.decode("*2\r\n$4\r\nKEYS\r\n$1\r\n*\r\n") == [
+                    "KEYS",
+                    "*",
+                ]
+
         class TestWhenArrayIsEmpty:
             def test_it_returns_empty_array(self, subject: ArrayCodec) -> None:
                 assert subject.decode("*0\r\n") == []
