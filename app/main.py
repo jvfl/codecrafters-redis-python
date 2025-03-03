@@ -34,7 +34,7 @@ async def handle_callback(
             break
 
         commandAndArgs = ARRAY_CODEC.decode(raw_command)
-        command = commandAndArgs[0]
+        command = commandAndArgs[0].upper()
         args = commandAndArgs[1:]
 
         await COMMAND_HANDLER_FACTORY.create(command).handle(args, writer)
