@@ -4,11 +4,14 @@ import uvloop
 
 from typing import Optional
 
+from app.protocol._array_codec import ArrayCodec
 from app.server import RedisServer, RedisConfig, RedisReplicaConfig
 from app.storage.keys import InMemoryKeysStorage
 
 
 APP = typer.Typer()
+
+ARRAY_CODEC = ArrayCodec()
 
 
 async def run_server(redis_server: RedisServer) -> None:
@@ -16,6 +19,13 @@ async def run_server(redis_server: RedisServer) -> None:
     print(redis_server.keys_storage)
 
     await redis_server.load_rdb_data()
+
+    replica_info = redis_server.config.replicaof
+    if replica_info:
+        _, writer = await asyncio.open_connection(replica_info.host, replica_info.port)
+
+        writer.write(ARRAY_CODEC.encode(["PING"]).encode())
+        await writer.drain()
 
     server = await asyncio.start_server(
         redis_server.handle_callback, redis_server.config.host, redis_server.config.port
