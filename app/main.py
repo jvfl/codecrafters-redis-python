@@ -1,6 +1,8 @@
 import asyncio
-from typing import Any, Optional
 import typer
+import uvloop
+
+from typing import Any, Optional
 
 from app.protocol import ArrayCodec
 from app.commands import CommandHandlerFactory
@@ -59,7 +61,7 @@ def main(
         if dbfilename is not None:
             CONFIG_MEMORY["dbfilename"] = dbfilename
 
-        asyncio.run(run_server("localhost", 6379))
+        uvloop.run(run_server("localhost", 6379))
     except KeyboardInterrupt:
         print("\nShutting down server...")
     except Exception as e:

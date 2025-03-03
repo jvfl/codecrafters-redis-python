@@ -8,5 +8,5 @@
 
 set -e # Exit on failure
 
-pip install typer
+pip install typer uvloop
 # (This file is empty since Python programs don't use a compile step)
