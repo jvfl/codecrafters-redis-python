@@ -4,7 +4,7 @@ import uvloop
 
 from typing import Optional
 
-from app.server import RedisServer, RedisConfig
+from app.server import RedisServer, RedisConfig, RedisReplicaConfig
 from app.storage.keys import InMemoryKeysStorage
 
 
@@ -29,14 +29,29 @@ def main(
     dir: Optional[str] = typer.Option(None),
     dbfilename: Optional[str] = typer.Option(None),
     port: int = typer.Option(6379),
+    replicaof: Optional[str] = typer.Option(None),
 ):
     try:
         print("Starting server with options:")
         print(f"dir: {dir}")
         print(f"dbfilename: {dbfilename}")
 
+        replica_config = None
+        if replicaof:
+            replicaof_info = replicaof.split(" ")
+            replica_config = RedisReplicaConfig(
+                replicaof_info[0], int(replicaof_info[1])
+            )
+
         server = RedisServer(
-            RedisConfig("localhost", port, dir, dbfilename), InMemoryKeysStorage()
+            RedisConfig(
+                host="localhost",
+                port=port,
+                dir=dir,
+                dbfilename=dbfilename,
+                replicaof=replica_config,
+            ),
+            InMemoryKeysStorage(),
         )
 
         uvloop.run(run_server(server))
