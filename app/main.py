@@ -3,9 +3,11 @@ import typer
 import uvloop
 
 from typing import Any, Optional
+from pathlib import Path
 
 from app.protocol import ArrayCodec
 from app.commands import CommandHandlerFactory
+from app.storage.rdb import RDBReader
 
 
 APP = typer.Typer()
@@ -60,6 +62,13 @@ def main(
             CONFIG_MEMORY["dir"] = dir
         if dbfilename is not None:
             CONFIG_MEMORY["dbfilename"] = dbfilename
+
+        dbfilename_path = Path(
+            f"{CONFIG_MEMORY.get('dir')}/{CONFIG_MEMORY.get('dbfilename')}"
+        )
+        if dbfilename_path.exists():
+            data = RDBReader(dbfilename_path).read()
+            MEMORY.update(data.hash_table)
 
         uvloop.run(run_server("localhost", 6379))
     except KeyboardInterrupt:
