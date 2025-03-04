@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class DataEntry(ABC):
+class Data(ABC):
     @abstractmethod
     def type(self) -> bytes:
         raise NotImplementedError

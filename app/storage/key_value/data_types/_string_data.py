@@ -2,13 +2,13 @@ from dataclasses import dataclass
 
 from app.protocol import BulkStringCodec
 
-from ._data_entry import DataEntry
+from ._data import Data
 
 STRING_CODEC = BulkStringCodec()
 
 
 @dataclass
-class StringEntry(DataEntry):
+class StringData(Data):
     data: str
 
     def type(self) -> bytes:

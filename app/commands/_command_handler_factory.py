@@ -1,4 +1,4 @@
-from app.storage.keys import KeysStorage
+from app.storage.key_value import KeyValueStorage
 from app.server import RedisConfig
 
 from ._command_handler import CommandHandler
@@ -13,10 +13,11 @@ from ._replconf_command_handler import ReplConfCommandHandler
 from ._psync_command_handler import PsyncCommandHandler
 from ._wait_command_handler import WaitCommandHandler
 from ._type_command_handler import TypeCommandHandler
+from ._xadd_command_handler import XAddCommandHandler
 
 
 class CommandHandlerFactory:
-    def __init__(self, keys_storage: KeysStorage, config: RedisConfig) -> None:
+    def __init__(self, keys_storage: KeyValueStorage, config: RedisConfig) -> None:
         self.keys_storage = keys_storage
         self.config = config
 
@@ -43,5 +44,7 @@ class CommandHandlerFactory:
             return WaitCommandHandler(self.config)
         elif command == "TYPE":
             return TypeCommandHandler(self.keys_storage)
+        elif command == "XADD":
+            return XAddCommandHandler(self.keys_storage)
         else:
             raise NotImplementedError(f"Command {command} is not supported")

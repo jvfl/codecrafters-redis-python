@@ -9,7 +9,8 @@ from ._redis_config import RedisConfig
 from ._redis_sync_manager import RedisSyncManager
 from ._redis_node_info import RedisNodeInfo
 
-from app.storage.keys import KeysStorage
+from app.storage.key_value import KeyValueStorage
+from app.storage.key_value.data_types import StringData
 from app.storage.rdb import RDBReader, RDBData
 from app.commands import CommandHandlerFactory
 from app.protocol import ArrayCodec
@@ -21,7 +22,7 @@ ARRAY_CODEC = ArrayCodec()
 @dataclass
 class RedisServer:
     config: RedisConfig
-    keys_storage: KeysStorage
+    keys_storage: KeyValueStorage
     command_factory: CommandHandlerFactory = field(init=False)
     sync_manager: Optional[RedisSyncManager] = field(init=False, default=None)
 
@@ -50,14 +51,15 @@ class RedisServer:
             print("No RDB file found")
             print()
 
-        for key, value in data.hash_table.items():
-            value, expiry = value
+        for key, item in data.hash_table.items():
+            item, expiry = item
+            entry = StringData(item)
 
             if expiry is not None:
                 expiry_time = expiry - round(time.time() * 1000)
-                await self.keys_storage.storeWithExpiration(key, value, expiry_time)
+                await self.keys_storage.storeWithExpiration(key, entry, expiry_time)
             else:
-                await self.keys_storage.store(key, value)
+                await self.keys_storage.store(key, entry)
 
     async def handle_callback(
         self,
@@ -67,7 +69,6 @@ class RedisServer:
         while True:
             command_bytes = await reader.read(100)
             raw_command = command_bytes.decode()
-            print("Command:", raw_command)
 
             if raw_command == "":
                 writer.close()
@@ -75,6 +76,7 @@ class RedisServer:
                 break
 
             commandAndArgs = ARRAY_CODEC.decode(raw_command)
+            print("Command:", commandAndArgs)
             command = commandAndArgs[0].upper()
             args = commandAndArgs[1:]
 

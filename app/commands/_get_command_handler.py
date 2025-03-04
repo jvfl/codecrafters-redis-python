@@ -1,13 +1,13 @@
 from app.commands._command_handler import CommandHandler
 from app.io import Writer, Reader
 from app.protocol import BulkStringCodec
-from app.storage.keys import KeysStorage
+from app.storage.key_value import KeyValueStorage
 
 STRING_CODEC = BulkStringCodec()
 
 
 class GetCommandHandler(CommandHandler):
-    def __init__(self, keys_storage: KeysStorage):
+    def __init__(self, keys_storage: KeyValueStorage):
         self.keys_storage = keys_storage
 
     async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:

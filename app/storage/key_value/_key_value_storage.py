@@ -1,22 +1,22 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from .data_types import DataEntry
+from .data_types import Data
 
 
-class KeysStorage(ABC):
+class KeyValueStorage(ABC):
     @abstractmethod
-    async def store(self, key: str, value: DataEntry) -> None:
+    async def store(self, key: str, value: Data) -> None:
         raise NotImplementedError
 
     @abstractmethod
     async def storeWithExpiration(
-        self, key: str, value: DataEntry, expire_in_millis: int
+        self, key: str, value: Data, expire_in_millis: int
     ) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    async def retrieve(self, key: str) -> Optional[DataEntry]:
+    async def retrieve(self, key: str) -> Optional[Data]:
         raise NotImplementedError
 
     @abstractmethod

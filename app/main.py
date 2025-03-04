@@ -7,18 +7,18 @@ from typing import Optional
 
 
 from app.server import RedisServer, RedisConfig, RedisNodeInfo
-from app.storage.keys import InMemoryKeysStorage
+from app.storage.key_value import InMemoryStorage
 
 
 APP = typer.Typer()
 
 
 async def run_server(redis_server: RedisServer) -> None:
+    await redis_server.load_rdb_data()
+
     print("Server started with the following memory:")
     print(redis_server.keys_storage)
     print()
-
-    await redis_server.load_rdb_data()
 
     server = await asyncio.start_server(
         redis_server.handle_callback, redis_server.config.host, redis_server.config.port
@@ -53,7 +53,7 @@ def main(
         print(config)
         print()
 
-        server = RedisServer(config, InMemoryKeysStorage())
+        server = RedisServer(config, InMemoryStorage())
 
         uvloop.run(run_server(server))
     except KeyboardInterrupt:
