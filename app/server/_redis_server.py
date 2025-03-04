@@ -3,13 +3,16 @@ import asyncio
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 
 from ._redis_config import RedisConfig
+from ._redis_sync_manager import RedisSyncManager
+from ._redis_node_info import RedisNodeInfo
+
 from app.storage.keys import KeysStorage
 from app.storage.rdb import RDBReader, RDBData
 from app.commands import CommandHandlerFactory
 from app.protocol import ArrayCodec
-
 
 ARRAY_CODEC = ArrayCodec()
 
@@ -19,9 +22,17 @@ class RedisServer:
     config: RedisConfig
     keys_storage: KeysStorage
     command_factory: CommandHandlerFactory = field(init=False)
+    sync_manager: Optional[RedisSyncManager] = field(init=False, default=None)
 
     def __post_init__(self):
         self.command_factory = CommandHandlerFactory(self.keys_storage, self.config)
+
+        master_info = self.config.master_info
+        if master_info:
+            self.sync_manager = RedisSyncManager(
+                current_node_info=RedisNodeInfo(self.config.host, self.config.port),
+                master_info=master_info,
+            )
 
     async def load_rdb_data(self):
         dbfilename_path = Path(f"{self.config.dir}/{self.config.dbfilename}")
@@ -30,9 +41,11 @@ class RedisServer:
             data = RDBReader(dbfilename_path).read()
             print("Data read from RDB file:")
             print(data)
+            print()
         else:
             data = RDBData([], {})
             print("No RDB file found")
+            print()
 
         for key, value in data.hash_table.items():
             value, expiry = value
@@ -48,10 +61,9 @@ class RedisServer:
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ) -> None:
-        print("Logs from your program will appear here!")
-
         while True:
-            raw_command = (await reader.read(100)).decode()
+            command_bytes = await reader.read(100)
+            raw_command = command_bytes.decode()
             print("Command:", raw_command)
 
             if raw_command == "":
@@ -63,5 +75,14 @@ class RedisServer:
 
             await self.command_factory.create(command).handle(args, writer)
 
+            if command == "SET":
+                for conn in self.config.replica_connections:
+                    conn.write(command_bytes)
+                    await conn.drain()
+
         writer.close()
         await writer.wait_closed()
+
+    async def sync_with_master(self):
+        if self.sync_manager:
+            await self.sync_manager.sync_with_master()

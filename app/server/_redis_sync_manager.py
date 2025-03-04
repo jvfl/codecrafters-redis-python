@@ -1,6 +1,6 @@
 import asyncio
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.protocol._array_codec import ArrayCodec
 
@@ -13,6 +13,8 @@ ARRAY_CODEC = ArrayCodec()
 class RedisSyncManager:
     current_node_info: RedisNodeInfo
     master_info: RedisNodeInfo
+    reader: asyncio.StreamReader = field(init=False)
+    writer: asyncio.StreamWriter = field(init=False)
 
     async def sync_with_master(self) -> None:
         self.reader, self.writer = await asyncio.open_connection(

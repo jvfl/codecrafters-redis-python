@@ -1,11 +1,12 @@
 import asyncio
 import typer
 import uvloop
+import traceback
 
 from typing import Optional
 
 
-from app.server import RedisServer, RedisConfig, RedisNodeInfo, RedisSyncManager
+from app.server import RedisServer, RedisConfig, RedisNodeInfo
 from app.storage.keys import InMemoryKeysStorage
 
 
@@ -15,6 +16,7 @@ APP = typer.Typer()
 async def run_server(redis_server: RedisServer) -> None:
     print("Server started with the following memory:")
     print(redis_server.keys_storage)
+    print()
 
     await redis_server.load_rdb_data()
 
@@ -22,16 +24,7 @@ async def run_server(redis_server: RedisServer) -> None:
         redis_server.handle_callback, redis_server.config.host, redis_server.config.port
     )
     async with server:
-        master_info = redis_server.config.master_info
-        if master_info:
-            sync_manager = RedisSyncManager(
-                current_node_info=RedisNodeInfo(
-                    redis_server.config.host, redis_server.config.port
-                ),
-                master_info=master_info,
-            )
-            await sync_manager.sync_with_master()
-
+        await redis_server.sync_with_master()
         await server.serve_forever()
 
 
@@ -43,31 +36,31 @@ def main(
     replicaof: Optional[str] = typer.Option(None),
 ):
     try:
-        print("Starting server with options:")
-        print(f"dir: {dir}")
-        print(f"dbfilename: {dbfilename}")
-
         replica_config = None
         if replicaof:
             replicaof_info = replicaof.split(" ")
             replica_config = RedisNodeInfo(replicaof_info[0], int(replicaof_info[1]))
 
-        server = RedisServer(
-            RedisConfig(
-                host="localhost",
-                port=port,
-                dir=dir,
-                dbfilename=dbfilename,
-                master_info=replica_config,
-            ),
-            InMemoryKeysStorage(),
+        config = RedisConfig(
+            host="localhost",
+            port=port,
+            dir=dir,
+            dbfilename=dbfilename,
+            master_info=replica_config,
         )
+
+        print("Starting server with config:")
+        print(config)
+        print()
+
+        server = RedisServer(config, InMemoryKeysStorage())
 
         uvloop.run(run_server(server))
     except KeyboardInterrupt:
         print("\nShutting down server...")
     except Exception as e:
         print(f"Error running server: {e}")
+        traceback.print_exc()
 
 
 if __name__ == "__main__":

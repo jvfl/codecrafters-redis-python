@@ -13,8 +13,8 @@ class PsyncCommandHandler(CommandHandler):
         self.config = config
 
     async def handle(self, args: list[str], writer: StreamWriter) -> None:
-        master_replid = args[0]
-        master_offset = args[1]
+        _ = args[0]  # master_replid
+        _ = args[1]  # master_offset
 
         response = f"+FULLRESYNC {self.config.master_replid} 0\r\n"
         writer.write(response.encode())

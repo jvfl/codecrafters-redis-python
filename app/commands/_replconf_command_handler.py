@@ -21,13 +21,14 @@ class ReplConfCommandHandler(CommandHandler):
             await self.handle_capabilities(args[1], writer)
 
     async def handle_listening_port(
-        self, listening_port: int, writer: StreamWriter
+        self, listening_port: int, writer: StreamWriter  # noqa: ARG002
     ) -> None:
+        self.config.replica_connections.append(writer)
         writer.write(b"+OK\r\n")
         await writer.drain()
 
     async def handle_capabilities(
-        self, capabilities: str, writer: StreamWriter
+        self, capabilities: str, writer: StreamWriter  # noqa: ARG002
     ) -> None:
         writer.write(b"+OK\r\n")
         await writer.drain()
