@@ -51,6 +51,8 @@ class RedisSyncManager:
             command_bytes = await self.reader.read(100)
             raw_commands = command_bytes.decode()
 
+            print("Raw commands", raw_commands)
+
             if raw_commands == "":
                 break
 
