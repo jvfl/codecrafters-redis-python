@@ -30,20 +30,20 @@ class RedisSyncManager:
 
     async def _handshake(self) -> None:
         await self._send_command("PING")
-        await self._handle_response()
+        await self._handle_response(7)
 
         await self._send_command(
             f"REPLCONF listening-port {self.current_node_info.port}"
         )
-        await self._handle_response()
+        await self._handle_response(5)
 
         await self._send_command("REPLCONF capa psync2")
-        await self._handle_response()
+        await self._handle_response(5)
 
     async def _ask_for_rdb(self) -> None:
         await self._send_command("PSYNC ? -1")
-        await self._handle_response()
-        await self._handle_response()
+        await self._handle_response(60)
+        await self._handle_response(93)
 
     async def _process_master_commands(self) -> None:
         while True:
@@ -56,11 +56,15 @@ class RedisSyncManager:
             if raw_commands == "":
                 break
 
-            for raw_command in raw_commands.split("\r\n*"):
-                if not raw_command.startswith("*"):
-                    raw_command = f"*{raw_command}"
+            commands = []
+            while raw_commands != "":
+                commandAndArgs = ARRAY_CODEC.decode(raw_commands)
+                commands.append(commandAndArgs)
+                raw_commands = raw_commands.replace(
+                    ARRAY_CODEC.encode(commandAndArgs), ""
+                )
 
-                commandAndArgs = ARRAY_CODEC.decode(raw_command + "\r\n")
+            for commandAndArgs in commands:
                 print("Replica Command:", commandAndArgs)
                 command = commandAndArgs[0].upper()
                 args = commandAndArgs[1:]
@@ -68,10 +72,14 @@ class RedisSyncManager:
                 await self.command_factory.create(command).handle(args, self.writer)
 
     async def _send_command(self, command: str) -> None:
+        print("Sending command", command)
         encoded_command = ARRAY_CODEC.encode(command.split(" "))
 
         self.writer.write(encoded_command.encode())
         await self.writer.drain()
 
-    async def _handle_response(self) -> None:
-        await self.reader.read(100)
+    async def _handle_response(self, bytes_to_read: int) -> None:
+        response = await self.reader.read(bytes_to_read)
+        print("Handled response", response.decode(errors="replace"))
+        print("Response end")
+        print()
