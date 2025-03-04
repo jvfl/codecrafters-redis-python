@@ -1,5 +1,7 @@
+import time
+
 from itertools import batched
-from typing import Optional, cast
+from typing import Optional, Tuple, cast
 
 from app.protocol import BulkStringCodec
 from app.storage.key_value import KeyValueStorage
@@ -23,17 +25,10 @@ class XAddCommandHandler(CommandHandler):
 
     async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
         key = args[0]
-        id = args[1]
-        raw_millis, raw_seq_number = id.split("-")
-
         stream = await self._retrieve_stream(key)
 
-        millis = int(raw_millis)
-        seq_number = (
-            int(raw_seq_number)
-            if raw_seq_number != "*"
-            else self.generate_seq_number(stream, millis)
-        )
+        id = args[1]
+        millis, seq_number = self._process_id(id, stream)
 
         if error := self._validate_id(stream, millis, seq_number):
             await writer.write(error.encode())
@@ -46,7 +41,24 @@ class XAddCommandHandler(CommandHandler):
         await self.keys_storage.store(key, stream)
         await writer.write(STRING_CODEC.encode(f"{millis}-{seq_number}").encode())
 
-    def generate_seq_number(self, stream: StreamData, millis: int) -> int:
+    def _process_id(self, id: str, stream: StreamData) -> Tuple[int, int]:
+        if id == "*":
+            millis = time.time_ns() // 1_000_000
+            seq_number = self._generate_seq_number(stream, millis)
+            return (millis, seq_number)
+
+        raw_millis, raw_seq_number = id.split("-")
+
+        millis = int(raw_millis)
+        seq_number = (
+            int(raw_seq_number)
+            if raw_seq_number != "*"
+            else self._generate_seq_number(stream, millis)
+        )
+
+        return (millis, seq_number)
+
+    def _generate_seq_number(self, stream: StreamData, millis: int) -> int:
         seq_numbers = [
             entry.seq_number for entry in stream.entries if entry.millis == millis
         ]
