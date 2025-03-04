@@ -9,6 +9,7 @@ from ._get_command_handler import GetCommandHandler
 from ._config_command_handler import ConfigCommandHandler
 from ._keys_command_handler import KeysCommandHandler
 from ._info_command_handler import InfoCommandHandler
+from ._replconf_command_handler import ReplConfCommandHandler
 
 
 class CommandHandlerFactory:
@@ -31,5 +32,7 @@ class CommandHandlerFactory:
             return KeysCommandHandler(self.keys_storage)
         elif command == "INFO":
             return InfoCommandHandler(self.config)
+        elif command == "REPLCONF":
+            return ReplConfCommandHandler(self.config)
         else:
             raise NotImplementedError(f"Command {command} is not supported")

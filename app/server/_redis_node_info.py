@@ -2,6 +2,6 @@ from dataclasses import dataclass
 
 
 @dataclass
-class RedisReplicaConfig:
+class RedisNodeInfo:
     host: str
     port: int

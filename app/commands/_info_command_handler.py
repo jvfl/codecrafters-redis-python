@@ -23,7 +23,7 @@ class InfoCommandHandler(CommandHandler):
         replication_info = ["# Replication"]
 
         role = "master"
-        if self.config.replicaof:
+        if self.config.master_info:
             role = "slave"
 
         replication_info.append(f"role:{role}")

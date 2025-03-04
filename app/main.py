@@ -4,14 +4,12 @@ import uvloop
 
 from typing import Optional
 
-from app.protocol._array_codec import ArrayCodec
-from app.server import RedisServer, RedisConfig, RedisReplicaConfig
+
+from app.server import RedisServer, RedisConfig, RedisNodeInfo, RedisSyncManager
 from app.storage.keys import InMemoryKeysStorage
 
 
 APP = typer.Typer()
-
-ARRAY_CODEC = ArrayCodec()
 
 
 async def run_server(redis_server: RedisServer) -> None:
@@ -20,17 +18,20 @@ async def run_server(redis_server: RedisServer) -> None:
 
     await redis_server.load_rdb_data()
 
-    replica_info = redis_server.config.replicaof
-    if replica_info:
-        _, writer = await asyncio.open_connection(replica_info.host, replica_info.port)
-
-        writer.write(ARRAY_CODEC.encode(["PING"]).encode())
-        await writer.drain()
-
     server = await asyncio.start_server(
         redis_server.handle_callback, redis_server.config.host, redis_server.config.port
     )
     async with server:
+        master_info = redis_server.config.master_info
+        if master_info:
+            sync_manager = RedisSyncManager(
+                current_node_info=RedisNodeInfo(
+                    redis_server.config.host, redis_server.config.port
+                ),
+                master_info=master_info,
+            )
+            await sync_manager.sync_with_master()
+
         await server.serve_forever()
 
 
@@ -49,9 +50,7 @@ def main(
         replica_config = None
         if replicaof:
             replicaof_info = replicaof.split(" ")
-            replica_config = RedisReplicaConfig(
-                replicaof_info[0], int(replicaof_info[1])
-            )
+            replica_config = RedisNodeInfo(replicaof_info[0], int(replicaof_info[1]))
 
         server = RedisServer(
             RedisConfig(
@@ -59,7 +58,7 @@ def main(
                 port=port,
                 dir=dir,
                 dbfilename=dbfilename,
-                replicaof=replica_config,
+                master_info=replica_config,
             ),
             InMemoryKeysStorage(),
         )
