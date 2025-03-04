@@ -19,3 +19,10 @@ class PsyncCommandHandler(CommandHandler):
         response = f"+FULLRESYNC {self.config.master_replid} 0\r\n"
         writer.write(response.encode())
         await writer.drain()
+
+        with open("resources/empty.rdb", "rb") as state:
+            data = state.read()
+            fullresync_response = f"${len(data)}\r\n"
+
+            writer.write(fullresync_response.encode() + data)
+            await writer.drain()
