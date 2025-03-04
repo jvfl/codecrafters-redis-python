@@ -1,4 +1,6 @@
 from app.storage.keys import KeysStorage
+from app.storage.keys.data_types import StringEntry
+
 from app.io import Writer, Reader
 
 from ._command_handler import CommandHandler
@@ -10,7 +12,7 @@ class SetCommandHandler(CommandHandler):
 
     async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
         key = args[0]
-        value = args[1]
+        value = StringEntry(args[1])
 
         # Handle expiration if PX option is present
         if len(args) > 3 and args[2].lower() == "px":

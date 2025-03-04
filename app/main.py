@@ -34,7 +34,7 @@ def main(
     dbfilename: Optional[str] = typer.Option(None),
     port: int = typer.Option(6379),
     replicaof: Optional[str] = typer.Option(None),
-):
+) -> None:
     try:
         replica_config = None
         if replicaof:

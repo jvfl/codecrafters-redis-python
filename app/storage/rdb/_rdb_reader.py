@@ -1,6 +1,6 @@
 import struct
 
-from typing import Tuple, Union
+from typing import Any, Tuple, Union
 from pathlib import Path
 
 from ._auxiliary_field import AuxiliaryField
@@ -24,7 +24,7 @@ class RDBReader:
     def __init__(self, file_path: Path):
         self.file = open(file_path, "rb")
 
-    def read(self):
+    def read(self) -> RDBData:
         magic_string = self.file.read(5)
         _ = self.file.read(4)  # version
 
@@ -47,14 +47,14 @@ class RDBReader:
             _, expires_size = self.read_encoded_length()
             next_section = self.file.read(1)
 
-        hash_table = {}
+        hash_table: dict[str, Any] = {}
         expiry = None
         while len(hash_table.keys()) < hash_table_size:
             if next_section == self.STRING_TYPE_HEADER:
                 key = self.read_string()
                 value = self.read_string()
 
-                hash_table[key] = (value, expiry)
+                hash_table[str(key)] = (value, expiry)
                 expiry = None
             if next_section == self.EXPIRES_SECONDS_HEADER:
                 expiry = struct.unpack("I", self.file.read(4))[0] * 1000
@@ -66,10 +66,12 @@ class RDBReader:
         if next_section == self.END_HEADER:
             return RDBData(auxiliary_fields, hash_table)
 
-    def read_auxiliary_field(self):
+        raise ValueError("Invalid RDB file")
+
+    def read_auxiliary_field(self) -> AuxiliaryField:
         key = self.read_string()
         value = self.read_string()
-        return AuxiliaryField(key, value)
+        return AuxiliaryField(str(key), value)
 
     def read_encoded_length(self) -> Tuple[bool, int]:
         length_encoding = struct.unpack("B", self.file.read(1))[0]
@@ -100,10 +102,10 @@ class RDBReader:
 
     def read_encoded_int(self, int_type_code: int) -> int:
         if int_type_code == self.SIGNED_INT_8:
-            return struct.unpack("b", self.file.read(1))[0]
+            return int(struct.unpack("b", self.file.read(1))[0])
         if int_type_code == self.SIGNED_INT_16:
-            return struct.unpack("h", self.file.read(2))[0]
+            return int(struct.unpack("h", self.file.read(2))[0])
         if int_type_code == self.SIGNED_INT_32:
-            return struct.unpack("i", self.file.read(4))[0]
+            return int(struct.unpack("i", self.file.read(4))[0])
         else:
             raise ValueError("Unsupported encoded int", int_type_code)

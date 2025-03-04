@@ -25,7 +25,7 @@ class RedisServer:
     command_factory: CommandHandlerFactory = field(init=False)
     sync_manager: Optional[RedisSyncManager] = field(init=False, default=None)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.command_factory = CommandHandlerFactory(self.keys_storage, self.config)
 
         master_info = self.config.master_info
@@ -37,7 +37,7 @@ class RedisServer:
                 config=self.config,
             )
 
-    async def load_rdb_data(self):
+    async def load_rdb_data(self) -> None:
         dbfilename_path = Path(f"{self.config.dir}/{self.config.dbfilename}")
 
         if dbfilename_path.exists():
@@ -91,6 +91,6 @@ class RedisServer:
             elif command == "PSYNC":
                 break
 
-    async def sync_with_master(self):
+    async def sync_with_master(self) -> None:
         if self.sync_manager:
             await self.sync_manager.sync_with_master()

@@ -16,7 +16,6 @@ class GetCommandHandler(CommandHandler):
         value = await self.keys_storage.retrieve(key)
 
         if value:
-            encoded_string = STRING_CODEC.encode(value)
-            await writer.write(encoded_string.encode())
+            await writer.write(value.encode())
         else:
             await writer.write("$-1\r\n".encode())
