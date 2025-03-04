@@ -13,6 +13,7 @@ from app.storage.keys import KeysStorage
 from app.storage.rdb import RDBReader, RDBData
 from app.commands import CommandHandlerFactory
 from app.protocol import ArrayCodec
+from app.io import ConnectionWriter
 
 ARRAY_CODEC = ArrayCodec()
 
@@ -74,7 +75,9 @@ class RedisServer:
             command = commandAndArgs[0].upper()
             args = commandAndArgs[1:]
 
-            await self.command_factory.create(command).handle(args, writer)
+            await self.command_factory.create(command).handle(
+                args, ConnectionWriter(writer)
+            )
 
             if command == "SET":
                 for conn in self.config.replica_connections:

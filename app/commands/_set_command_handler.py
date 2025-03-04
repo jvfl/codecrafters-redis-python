@@ -1,6 +1,5 @@
-from asyncio import StreamWriter
-
 from app.storage.keys import KeysStorage
+from app.io import Writer
 
 from ._command_handler import CommandHandler
 
@@ -9,7 +8,7 @@ class SetCommandHandler(CommandHandler):
     def __init__(self, keys_storage: KeysStorage):
         self.keys_storage = keys_storage
 
-    async def handle(self, args: list[str], writer: StreamWriter) -> None:
+    async def handle(self, args: list[str], writer: Writer) -> None:
         key = args[0]
         value = args[1]
 
@@ -19,10 +18,8 @@ class SetCommandHandler(CommandHandler):
                 px_value = int(args[3])
                 await self.keys_storage.storeWithExpiration(key, value, px_value)
             except (ValueError, IndexError):
-                writer.write(b"-ERR Invalid PX value\r\n")
-                await writer.drain()
+                await writer.write("-ERR Invalid PX value\r\n".encode())
         else:
             await self.keys_storage.store(key, value)
 
-        writer.write(b"+OK\r\n")
-        await writer.drain()
+        await writer.write("+OK\r\n".encode())

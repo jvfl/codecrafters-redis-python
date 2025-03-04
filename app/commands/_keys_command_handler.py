@@ -1,6 +1,6 @@
 import re
-from asyncio import StreamWriter
 
+from app.io import Writer
 from app.protocol import ArrayCodec
 from app.storage.keys import KeysStorage
 
@@ -11,7 +11,7 @@ class KeysCommandHandler(CommandHandler):
     def __init__(self, keys_storage: KeysStorage):
         self.keys_storage = keys_storage
 
-    async def handle(self, args: list[str], writer: StreamWriter) -> None:
+    async def handle(self, args: list[str], writer: Writer) -> None:
         pattern = args[0]
         expression = re.compile(pattern.replace("*", ".*"))
 
@@ -19,5 +19,4 @@ class KeysCommandHandler(CommandHandler):
         results = [key for key in keys if expression.match(key)]
 
         response = ArrayCodec().encode(results)
-        writer.write(response.encode("utf-8"))
-        await writer.drain()
+        await writer.write(response.encode())

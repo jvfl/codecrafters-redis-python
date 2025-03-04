@@ -1,5 +1,4 @@
-from asyncio import StreamWriter
-
+from app.io import Writer, ConnectionWriter
 from app.protocol import ArrayCodec
 from app.server import RedisConfig
 
@@ -12,7 +11,7 @@ class ReplConfCommandHandler(CommandHandler):
     def __init__(self, config: RedisConfig):
         self.config = config
 
-    async def handle(self, args: list[str], writer: StreamWriter) -> None:
+    async def handle(self, args: list[str], writer: Writer) -> None:
         subcommand = args[0].upper()
 
         if subcommand == "LISTENING-PORT":
@@ -23,22 +22,18 @@ class ReplConfCommandHandler(CommandHandler):
             await self.handle_getack(args[1], writer)
 
     async def handle_listening_port(
-        self, listening_port: int, writer: StreamWriter  # noqa: ARG002
+        self, listening_port: int, writer: Writer  # noqa: ARG002
     ) -> None:
-        self.config.replica_connections.append(writer)
-        writer.write(b"+OK\r\n")
-        await writer.drain()
+        if isinstance(writer, ConnectionWriter):
+            self.config.replica_connections.append(writer._connection)
+        await writer.write("+OK\r\n".encode())
 
     async def handle_capabilities(
-        self, capabilities: str, writer: StreamWriter  # noqa: ARG002
+        self, capabilities: str, writer: Writer  # noqa: ARG002
     ) -> None:
-        writer.write(b"+OK\r\n")
-        await writer.drain()
+        await writer.write("+OK\r\n".encode())
 
-    async def handle_getack(
-        self, offset: str, writer: StreamWriter  # noqa: ARG002
-    ) -> None:
+    async def handle_getack(self, offset: str, writer: Writer) -> None:  # noqa: ARG002
         response = ["REPLCONF", "ACK", "0"]
 
-        writer.write(ARRAY_CODEC.encode(response).encode())
-        await writer.drain()
+        await writer.write(ARRAY_CODEC.encode(response).encode())

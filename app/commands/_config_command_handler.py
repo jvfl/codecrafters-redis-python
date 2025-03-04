@@ -1,4 +1,4 @@
-from asyncio import StreamWriter
+from app.io import Writer
 from dataclasses import asdict
 
 from app.server import RedisConfig
@@ -13,15 +13,14 @@ class ConfigCommandHandler(CommandHandler):
     def __init__(self, config: RedisConfig):
         self.config = asdict(config)
 
-    async def handle(self, args: list[str], writer: StreamWriter) -> None:
+    async def handle(self, args: list[str], writer: Writer) -> None:
         subcommand = args[0]
 
         if subcommand == "GET":
             await self.handle_get(args[1:], writer)
 
-    async def handle_get(self, args: list[str], writer: StreamWriter) -> None:
+    async def handle_get(self, args: list[str], writer: Writer) -> None:
         config_key = args[0]
 
         response = ARRAY_CODEC.encode([config_key, self.config[config_key]])
-        writer.write(response.encode("utf-8"))
-        await writer.drain()
+        await writer.write(response.encode())

@@ -1,5 +1,4 @@
-from asyncio import StreamWriter
-
+from app.io import Writer
 from app.protocol import BulkStringCodec
 from app.server import RedisConfig
 
@@ -12,13 +11,13 @@ class InfoCommandHandler(CommandHandler):
     def __init__(self, config: RedisConfig):
         self.config = config
 
-    async def handle(self, args: list[str], writer: StreamWriter) -> None:
+    async def handle(self, args: list[str], writer: Writer) -> None:
         subcommand = args[0].upper()
 
         if subcommand == "REPLICATION":
             await self.handle_replication(writer)
 
-    async def handle_replication(self, writer: StreamWriter) -> None:
+    async def handle_replication(self, writer: Writer) -> None:
 
         replication_info = ["# Replication"]
 
@@ -35,5 +34,4 @@ class InfoCommandHandler(CommandHandler):
             )
 
         response = STRING_CODEC.encode("\r\n".join(replication_info) + "\r\n")
-        writer.write(response.encode("utf-8"))
-        await writer.drain()
+        await writer.write(response.encode())
