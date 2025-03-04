@@ -1,5 +1,5 @@
 from app.storage.keys import KeysStorage
-from app.io import Writer
+from app.io import Writer, Reader
 
 from ._command_handler import CommandHandler
 
@@ -8,7 +8,7 @@ class SetCommandHandler(CommandHandler):
     def __init__(self, keys_storage: KeysStorage):
         self.keys_storage = keys_storage
 
-    async def handle(self, args: list[str], writer: Writer) -> None:
+    async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
         key = args[0]
         value = args[1]
 

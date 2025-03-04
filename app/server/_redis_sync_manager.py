@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 from app.protocol._array_codec import ArrayCodec
 from app.commands import CommandHandlerFactory
-from app.io import ConnectionWriter, NoOpWriter, Writer
+from app.io import ConnectionWriter, NoOpWriter, Writer, ConnectionReader
 
 from ._redis_config import RedisConfig
 from ._redis_node_info import RedisNodeInfo
@@ -78,8 +78,8 @@ class RedisSyncManager:
                 if command == "REPLCONF":
                     writer = ConnectionWriter(self.writer)
 
-                await handler.handle(args, writer)
-                self.config.master_repl_offset += len(
+                await handler.handle(args, writer, ConnectionReader(self.reader))
+                self.config.replica_offset += len(
                     ARRAY_CODEC.encode(commandAndArgs).encode()
                 )
 

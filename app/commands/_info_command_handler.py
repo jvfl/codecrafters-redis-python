@@ -1,4 +1,4 @@
-from app.io import Writer
+from app.io import Writer, Reader
 from app.protocol import BulkStringCodec
 from app.server import RedisConfig
 
@@ -11,7 +11,7 @@ class InfoCommandHandler(CommandHandler):
     def __init__(self, config: RedisConfig):
         self.config = config
 
-    async def handle(self, args: list[str], writer: Writer) -> None:
+    async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
         subcommand = args[0].upper()
 
         if subcommand == "REPLICATION":

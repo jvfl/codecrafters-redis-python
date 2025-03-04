@@ -1,4 +1,4 @@
-from app.io import Writer
+from app.io import Writer, Reader
 from dataclasses import asdict
 
 from app.server import RedisConfig
@@ -13,7 +13,7 @@ class ConfigCommandHandler(CommandHandler):
     def __init__(self, config: RedisConfig):
         self.config = asdict(config)
 
-    async def handle(self, args: list[str], writer: Writer) -> None:
+    async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
         subcommand = args[0]
 
         if subcommand == "GET":

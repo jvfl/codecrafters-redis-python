@@ -1,6 +1,6 @@
-from app.io import Writer, ConnectionWriter
 from app.protocol import ArrayCodec
-from app.server import RedisConfig
+from app.server import RedisConfig, ReplicaConnection
+from app.io import Writer, ConnectionWriter, Reader, ConnectionReader
 
 from ._command_handler import CommandHandler
 
@@ -11,21 +11,24 @@ class ReplConfCommandHandler(CommandHandler):
     def __init__(self, config: RedisConfig):
         self.config = config
 
-    async def handle(self, args: list[str], writer: Writer) -> None:
+    async def handle(self, args: list[str], writer: Writer, reader: Reader) -> None:
         subcommand = args[0].upper()
 
         if subcommand == "LISTENING-PORT":
-            await self.handle_listening_port(int(args[1]), writer)
+            await self.handle_listening_port(int(args[1]), writer, reader)
         elif subcommand == "CAPA":
             await self.handle_capabilities(args[1], writer)
         elif subcommand == "GETACK":
             await self.handle_getack(args[1], writer)
 
     async def handle_listening_port(
-        self, listening_port: int, writer: Writer  # noqa: ARG002
+        self, listening_port: int, writer: Writer, reader: Reader  # noqa: ARG002
     ) -> None:
-        if isinstance(writer, ConnectionWriter):
-            self.config.replica_connections.append(writer._connection)
+        if isinstance(writer, ConnectionWriter) and isinstance(
+            reader, ConnectionReader
+        ):
+            connection = ReplicaConnection(writer, reader)
+            self.config.replica_connections.append(connection)
         await writer.write("+OK\r\n".encode())
 
     async def handle_capabilities(
@@ -34,6 +37,6 @@ class ReplConfCommandHandler(CommandHandler):
         await writer.write("+OK\r\n".encode())
 
     async def handle_getack(self, offset: str, writer: Writer) -> None:  # noqa: ARG002
-        response = ["REPLCONF", "ACK", str(self.config.master_repl_offset)]
+        response = ["REPLCONF", "ACK", str(self.config.replica_offset)]
 
         await writer.write(ARRAY_CODEC.encode(response).encode())

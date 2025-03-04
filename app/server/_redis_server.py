@@ -13,7 +13,7 @@ from app.storage.keys import KeysStorage
 from app.storage.rdb import RDBReader, RDBData
 from app.commands import CommandHandlerFactory
 from app.protocol import ArrayCodec
-from app.io import ConnectionWriter
+from app.io import ConnectionWriter, ConnectionReader
 
 ARRAY_CODEC = ArrayCodec()
 
@@ -70,6 +70,8 @@ class RedisServer:
             print("Command:", raw_command)
 
             if raw_command == "":
+                writer.close()
+                await writer.wait_closed()
                 break
 
             commandAndArgs = ARRAY_CODEC.decode(raw_command)
@@ -77,16 +79,17 @@ class RedisServer:
             args = commandAndArgs[1:]
 
             await self.command_factory.create(command).handle(
-                args, ConnectionWriter(writer)
+                args, ConnectionWriter(writer), ConnectionReader(reader)
             )
 
             if command == "SET":
                 for conn in self.config.replica_connections:
-                    conn.write(command_bytes)
-                    await conn.drain()
-
-        writer.close()
-        await writer.wait_closed()
+                    await conn.writer.write(command_bytes)
+                self.config.master_repl_offset += len(
+                    ARRAY_CODEC.encode(commandAndArgs).encode()
+                )
+            elif command == "PSYNC":
+                break
 
     async def sync_with_master(self):
         if self.sync_manager:

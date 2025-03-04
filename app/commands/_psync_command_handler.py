@@ -1,4 +1,4 @@
-from app.io import Writer
+from app.io import Writer, Reader
 from app.protocol import BulkStringCodec
 from app.server import RedisConfig
 
@@ -11,9 +11,9 @@ class PsyncCommandHandler(CommandHandler):
     def __init__(self, config: RedisConfig):
         self.config = config
 
-    async def handle(self, args: list[str], writer: Writer) -> None:
-        _ = args[0]  # master_replid
-        _ = args[1]  # master_offset
+    async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
+        args[0]  # master_replid
+        args[1]  # master_offset
 
         response = f"+FULLRESYNC {self.config.master_replid} 0\r\n"
         await writer.write(response.encode())
