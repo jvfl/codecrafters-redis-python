@@ -34,6 +34,6 @@ class ReplConfCommandHandler(CommandHandler):
         await writer.write("+OK\r\n".encode())
 
     async def handle_getack(self, offset: str, writer: Writer) -> None:  # noqa: ARG002
-        response = ["REPLCONF", "ACK", "0"]
+        response = ["REPLCONF", "ACK", str(self.config.master_repl_offset)]
 
         await writer.write(ARRAY_CODEC.encode(response).encode())

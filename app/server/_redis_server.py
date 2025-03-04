@@ -34,6 +34,7 @@ class RedisServer:
                 current_node_info=RedisNodeInfo(self.config.host, self.config.port),
                 master_info=master_info,
                 command_factory=self.command_factory,
+                config=self.config,
             )
 
     async def load_rdb_data(self):

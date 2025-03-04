@@ -6,6 +6,7 @@ from app.protocol._array_codec import ArrayCodec
 from app.commands import CommandHandlerFactory
 from app.io import ConnectionWriter, NoOpWriter, Writer
 
+from ._redis_config import RedisConfig
 from ._redis_node_info import RedisNodeInfo
 
 ARRAY_CODEC = ArrayCodec()
@@ -16,6 +17,7 @@ class RedisSyncManager:
     current_node_info: RedisNodeInfo
     master_info: RedisNodeInfo
     command_factory: CommandHandlerFactory
+    config: RedisConfig
     reader: asyncio.StreamReader = field(init=False)
     writer: asyncio.StreamWriter = field(init=False)
 
@@ -43,13 +45,13 @@ class RedisSyncManager:
 
     async def _ask_for_rdb(self) -> None:
         await self._send_command("PSYNC ? -1")
-        await self._handle_response(60)
+        await self._handle_response(56)
         await self._handle_response(93)
 
     async def _process_master_commands(self) -> None:
         while True:
             print("Replica listening...")
-            command_bytes = await self.reader.read(100)
+            command_bytes = await self.reader.read(1024)
             raw_commands = command_bytes.decode()
 
             print("Raw commands", raw_commands)
@@ -77,6 +79,9 @@ class RedisSyncManager:
                     writer = ConnectionWriter(self.writer)
 
                 await handler.handle(args, writer)
+                self.config.master_repl_offset += len(
+                    ARRAY_CODEC.encode(commandAndArgs).encode()
+                )
 
     async def _send_command(self, command: str) -> None:
         print("Sending command", command)
