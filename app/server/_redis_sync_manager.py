@@ -14,32 +14,33 @@ class RedisSyncManager:
     current_node_info: RedisNodeInfo
     master_info: RedisNodeInfo
 
-    async def sync_with_master(self):
-        reader, writer = await asyncio.open_connection(
+    async def sync_with_master(self) -> None:
+        self.reader, self.writer = await asyncio.open_connection(
             self.master_info.host, self.master_info.port
         )
 
-        await self._handshake(reader, writer)
+        await self._handshake()
 
-    async def _handshake(
-        self,
-        reader: asyncio.StreamReader,
-        writer: asyncio.StreamWriter,
-    ):
+    async def _handshake(self) -> None:
+        await self._send_command("PING")
+        await self._handle_response()
 
-        writer.write(ARRAY_CODEC.encode(["PING"]).encode())
-        await writer.drain()
-
-        await reader.read(100)
-
-        writer.write(
-            ARRAY_CODEC.encode(
-                ["REPLCONF", "listening-port", str(self.current_node_info.port)]
-            ).encode()
+        await self._send_command(
+            f"REPLCONF listening-port {self.current_node_info.port}"
         )
-        await writer.drain()
+        await self._handle_response()
 
-        await reader.read(100)
+        await self._send_command("REPLCONF capa psync2")
+        await self._handle_response()
 
-        writer.write(ARRAY_CODEC.encode(["REPLCONF", "capa", "psync2"]).encode())
-        await writer.drain()
+        await self._send_command("PSYNC ? -1")
+        await self._handle_response()
+
+    async def _send_command(self, command: str) -> None:
+        encoded_command = ARRAY_CODEC.encode(command.split(" "))
+
+        self.writer.write(encoded_command.encode())
+        await self.writer.drain()
+
+    async def _handle_response(self) -> None:
+        await self.reader.read(100)

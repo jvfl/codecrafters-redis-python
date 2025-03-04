@@ -10,6 +10,7 @@ from ._config_command_handler import ConfigCommandHandler
 from ._keys_command_handler import KeysCommandHandler
 from ._info_command_handler import InfoCommandHandler
 from ._replconf_command_handler import ReplConfCommandHandler
+from ._psync_command_handler import PsyncCommandHandler
 
 
 class CommandHandlerFactory:
@@ -34,5 +35,7 @@ class CommandHandlerFactory:
             return InfoCommandHandler(self.config)
         elif command == "REPLCONF":
             return ReplConfCommandHandler(self.config)
+        elif command == "PSYNC":
+            return PsyncCommandHandler(self.config)
         else:
             raise NotImplementedError(f"Command {command} is not supported")
