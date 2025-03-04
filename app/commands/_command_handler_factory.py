@@ -12,6 +12,7 @@ from ._info_command_handler import InfoCommandHandler
 from ._replconf_command_handler import ReplConfCommandHandler
 from ._psync_command_handler import PsyncCommandHandler
 from ._wait_command_handler import WaitCommandHandler
+from ._type_command_handler import TypeCommandHandler
 
 
 class CommandHandlerFactory:
@@ -40,5 +41,7 @@ class CommandHandlerFactory:
             return PsyncCommandHandler(self.config)
         elif command == "WAIT":
             return WaitCommandHandler(self.config)
+        elif command == "TYPE":
+            return TypeCommandHandler(self.keys_storage)
         else:
             raise NotImplementedError(f"Command {command} is not supported")
