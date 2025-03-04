@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-from typing import Any
 
 from ._data import Data
+from ._stream_data_entry import StreamDataEntry
 
 
 @dataclass
 class StreamData(Data):
-    entries: dict[str, dict[str, Any]]
+    entries: list[StreamDataEntry]
 
     def type(self) -> bytes:
         return "+stream\r\n".encode()
