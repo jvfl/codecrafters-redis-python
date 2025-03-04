@@ -24,9 +24,16 @@ class XAddCommandHandler(CommandHandler):
     async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
         key = args[0]
         id = args[1]
-        millis, seq_number = (int(part) for part in id.split("-"))
+        raw_millis, raw_seq_number = id.split("-")
 
         stream = await self._retrieve_stream(key)
+
+        millis = int(raw_millis)
+        seq_number = (
+            int(raw_seq_number)
+            if raw_seq_number != "*"
+            else self.generate_seq_number(stream, millis)
+        )
 
         if error := self._validate_id(stream, millis, seq_number):
             await writer.write(error.encode())
@@ -37,7 +44,21 @@ class XAddCommandHandler(CommandHandler):
         stream.entries.append(StreamDataEntry(millis, seq_number, value_data))
 
         await self.keys_storage.store(key, stream)
-        await writer.write(STRING_CODEC.encode(id).encode())
+        await writer.write(STRING_CODEC.encode(f"{millis}-{seq_number}").encode())
+
+    def generate_seq_number(self, stream: StreamData, millis: int) -> int:
+        seq_numbers = [
+            entry.seq_number for entry in stream.entries if entry.millis == millis
+        ]
+
+        if len(seq_numbers) == 0:
+            if millis == 0:
+                return 1
+            else:
+                return 0
+        else:
+            last_seq_number = max(seq_numbers)
+            return last_seq_number + 1
 
     async def _retrieve_stream(self, key: str) -> StreamData:
         data = await self.keys_storage.retrieve(key)
