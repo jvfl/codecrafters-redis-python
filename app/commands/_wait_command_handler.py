@@ -15,4 +15,7 @@ class WaitCommandHandler(CommandHandler):
         _ = args[0]  # numreplicas
         _ = args[1]  # timeout
 
-        await writer.write(":0\r\n".encode())
+        ready_replicas = len(self.config.replica_connections)
+        response = f":{ready_replicas}\r\n"
+
+        await writer.write(response.encode())
