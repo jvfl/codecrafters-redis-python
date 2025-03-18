@@ -16,8 +16,6 @@ from app.commands import CommandHandlerFactory
 from app.protocol import ArrayCodec
 from app.io import ConnectionWriter, ConnectionReader
 
-ARRAY_CODEC = ArrayCodec()
-
 
 @dataclass
 class RedisServer:
@@ -75,7 +73,7 @@ class RedisServer:
                 await writer.wait_closed()
                 break
 
-            commandAndArgs = ARRAY_CODEC.decode(raw_command)
+            commandAndArgs = ArrayCodec.decode(raw_command)
             print("Command:", commandAndArgs)
             command = commandAndArgs[0].upper()
             args = commandAndArgs[1:]
@@ -87,9 +85,7 @@ class RedisServer:
             if command == "SET":
                 for conn in self.config.replica_connections:
                     await conn.writer.write(command_bytes)
-                self.config.master_repl_offset += len(
-                    ARRAY_CODEC.encode(commandAndArgs).encode()
-                )
+                self.config.master_repl_offset += len(ArrayCodec.encode(commandAndArgs))
             elif command == "PSYNC":
                 break
 

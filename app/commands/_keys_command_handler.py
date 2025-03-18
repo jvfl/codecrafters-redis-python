@@ -18,5 +18,4 @@ class KeysCommandHandler(CommandHandler):
         keys = await self.keys_storage.keys()
         results = [key for key in keys if expression.match(key)]
 
-        response = ArrayCodec().encode(results)
-        await writer.write(response.encode())
+        await writer.write(ArrayCodec.encode(results))

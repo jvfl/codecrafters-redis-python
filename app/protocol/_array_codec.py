@@ -24,30 +24,35 @@ class ArrayCodec:
     *2\\r\\n$5\\r\\nhello\\r\\n$5\\r\\nworld\r\n
     """
 
-    def decode(self, data: str) -> list[str]:
+    @staticmethod
+    def decode(data: str) -> list[str]:
         number_prefix, elements = data.split("\r\n", 1)
         number_of_elements = int(number_prefix[1:])
 
-        return self._extract_elements(elements, number_of_elements)
+        return ArrayCodec._extract_elements(elements, number_of_elements)
 
-    def encode(self, data: list[Any]) -> str:
+    @staticmethod
+    def encode(data: list[Any]) -> bytes:
         acc = [f"*{len(data)}"]
 
         for element in data:
             if isinstance(element, list):
-                acc.append(self.encode(element).removesuffix("\r\n"))
+                acc.append(ArrayCodec.encode(element).decode().removesuffix("\r\n"))
             elif isinstance(element, str):
                 acc.append(f"${len(element)}\r\n{element}")
 
-        return "\r\n".join(acc) + "\r\n"
+        return ("\r\n".join(acc) + "\r\n").encode()
 
-    def _extract_elements(self, elements: str, number_of_elements: int) -> list[Any]:
+    @staticmethod
+    def _extract_elements(elements: str, number_of_elements: int) -> list[Any]:
         acc: list[Any] = []
 
         while len(acc) < number_of_elements:
             if elements.startswith("*"):
-                array_values = self.decode(elements)
-                elements = elements.replace(self.encode(array_values), "")
+                array_values = ArrayCodec.decode(elements)
+                elements = elements.replace(
+                    ArrayCodec.encode(array_values).decode(), ""
+                )
                 acc.append(array_values)
             elif elements.startswith("$"):
                 values = elements.split("\r\n", 2)

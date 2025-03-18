@@ -9,8 +9,6 @@ from app.io import ConnectionWriter, NoOpWriter, Writer, ConnectionReader
 from ._redis_config import RedisConfig
 from ._redis_node_info import RedisNodeInfo
 
-ARRAY_CODEC = ArrayCodec()
-
 
 @dataclass
 class RedisSyncManager:
@@ -61,10 +59,10 @@ class RedisSyncManager:
 
             commands = []
             while raw_commands != "":
-                commandAndArgs = ARRAY_CODEC.decode(raw_commands)
+                commandAndArgs = ArrayCodec.decode(raw_commands)
                 commands.append(commandAndArgs)
                 raw_commands = raw_commands.replace(
-                    ARRAY_CODEC.encode(commandAndArgs), ""
+                    ArrayCodec.encode(commandAndArgs).decode(), ""
                 )
 
             for commandAndArgs in commands:
@@ -79,15 +77,13 @@ class RedisSyncManager:
                     writer = ConnectionWriter(self.writer)
 
                 await handler.handle(args, writer, ConnectionReader(self.reader))
-                self.config.replica_offset += len(
-                    ARRAY_CODEC.encode(commandAndArgs).encode()
-                )
+                self.config.replica_offset += len(ArrayCodec.encode(commandAndArgs))
 
     async def _send_command(self, command: str) -> None:
         print("Sending command", command)
-        encoded_command = ARRAY_CODEC.encode(command.split(" "))
+        encoded_command = ArrayCodec.encode(command.split(" "))
 
-        self.writer.write(encoded_command.encode())
+        self.writer.write(encoded_command)
         await self.writer.drain()
 
     async def _handle_response(self, bytes_to_read: int) -> None:

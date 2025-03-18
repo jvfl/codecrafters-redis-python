@@ -4,8 +4,6 @@ from app.io import Writer, ConnectionWriter, Reader, ConnectionReader
 
 from ._command_handler import CommandHandler
 
-ARRAY_CODEC = ArrayCodec()
-
 
 class ReplConfCommandHandler(CommandHandler):
     def __init__(self, config: RedisConfig):
@@ -39,4 +37,4 @@ class ReplConfCommandHandler(CommandHandler):
     async def handle_getack(self, offset: str, writer: Writer) -> None:  # noqa: ARG002
         response = ["REPLCONF", "ACK", str(self.config.replica_offset)]
 
-        await writer.write(ARRAY_CODEC.encode(response).encode())
+        await writer.write(ArrayCodec.encode(response))

@@ -6,8 +6,6 @@ from app.protocol import ArrayCodec
 
 from ._command_handler import CommandHandler
 
-ARRAY_CODEC = ArrayCodec()
-
 
 class ConfigCommandHandler(CommandHandler):
     def __init__(self, config: RedisConfig):
@@ -22,5 +20,5 @@ class ConfigCommandHandler(CommandHandler):
     async def handle_get(self, args: list[str], writer: Writer) -> None:
         config_key = args[0]
 
-        response = ARRAY_CODEC.encode([config_key, self.config[config_key]])
-        await writer.write(response.encode())
+        response = ArrayCodec.encode([config_key, self.config[config_key]])
+        await writer.write(response)

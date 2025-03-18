@@ -6,8 +6,6 @@ from app.server import RedisConfig, ReplicaConnection
 
 from ._command_handler import CommandHandler
 
-ARRAY_CODEC = ArrayCodec()
-
 
 class WaitCommandHandler(CommandHandler):
     def __init__(self, config: RedisConfig):
@@ -55,12 +53,12 @@ class WaitCommandHandler(CommandHandler):
         self, command: str, connection: ReplicaConnection
     ) -> int:
         print("Sending command", command)
-        encoded_command = ARRAY_CODEC.encode(command.split(" "))
+        encoded_command = ArrayCodec.encode(command.split(" "))
 
-        await connection.writer.write(encoded_command.encode())
+        await connection.writer.write(encoded_command)
 
         print("Awaiting response...")
         response = await connection.reader.read(100)
         print("Response", response.decode())
-        offset = ARRAY_CODEC.decode(response.decode())[-1]
+        offset = ArrayCodec.decode(response.decode())[-1]
         return int(offset)
