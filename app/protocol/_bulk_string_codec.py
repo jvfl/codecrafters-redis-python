@@ -24,7 +24,8 @@ class BulkStringCodec:
     $-1\\r\\n (for RESP 2)
     """
 
-    def decode(self, data: str) -> str:
+    @staticmethod
+    def decode(data: str) -> str:
         """
         Parse a bulk string from a RESP message.
 
@@ -38,11 +39,12 @@ class BulkStringCodec:
 
         return data.split("\r\n")[1]
 
-    def encode(self, data: Optional[str]) -> str:
+    @staticmethod
+    def encode(data: Optional[str]) -> bytes:
         """
         Encode a string into a RESP message as bulk string
         """
         if data is None:
-            return "$-1\r\n"
+            return "$-1\r\n".encode()
 
-        return f"${len(data)}\r\n{data}\r\n"
+        return f"${len(data)}\r\n{data}\r\n".encode()

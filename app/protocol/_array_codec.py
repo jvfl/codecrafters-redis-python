@@ -54,7 +54,7 @@ class ArrayCodec:
                 elements = values[2]
 
                 current_element = "\r\n".join(values[:2])
-                bulk_string = BulkStringCodec().decode(current_element)
+                bulk_string = BulkStringCodec.decode(current_element)
                 acc.append(cast(Any, bulk_string))
             else:
                 continue

@@ -4,8 +4,6 @@ from app.server import RedisConfig
 
 from ._command_handler import CommandHandler
 
-STRING_CODEC = BulkStringCodec()
-
 
 class InfoCommandHandler(CommandHandler):
     def __init__(self, config: RedisConfig):
@@ -33,5 +31,5 @@ class InfoCommandHandler(CommandHandler):
                 f"master_repl_offset:{self.config.master_repl_offset}"
             )
 
-        response = STRING_CODEC.encode("\r\n".join(replication_info) + "\r\n")
-        await writer.write(response.encode())
+        response = BulkStringCodec.encode("\r\n".join(replication_info) + "\r\n")
+        await writer.write(response)

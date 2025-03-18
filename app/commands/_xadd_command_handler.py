@@ -10,8 +10,6 @@ from app.io import Writer, Reader
 
 from ._command_handler import CommandHandler
 
-
-STRING_CODEC = BulkStringCodec()
 MIN_ID_ERROR_MSG = "-ERR The ID specified in XADD must be greater than 0-0\r\n"
 SHOULD_BE_BIGGER_ERROR_MSG = (
     "-ERR The ID specified in XADD is equal or smaller than"
@@ -39,7 +37,7 @@ class XAddCommandHandler(CommandHandler):
         stream.entries.append(StreamDataEntry(millis, seq_number, value_data))
 
         await self.keys_storage.store(key, stream)
-        await writer.write(STRING_CODEC.encode(f"{millis}-{seq_number}").encode())
+        await writer.write(BulkStringCodec.encode(f"{millis}-{seq_number}"))
 
     def _process_id(self, id: str, stream: StreamData) -> Tuple[int, int]:
         if id == "*":

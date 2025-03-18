@@ -1,10 +1,7 @@
 from app.io import Writer, Reader
-from app.protocol import BulkStringCodec
 from app.server import RedisConfig
 
 from ._command_handler import CommandHandler
-
-STRING_CODEC = BulkStringCodec()
 
 
 class PsyncCommandHandler(CommandHandler):

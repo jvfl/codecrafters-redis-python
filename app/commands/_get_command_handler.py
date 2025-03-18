@@ -1,9 +1,6 @@
 from app.commands._command_handler import CommandHandler
 from app.io import Writer, Reader
-from app.protocol import BulkStringCodec
 from app.storage.key_value import KeyValueStorage
-
-STRING_CODEC = BulkStringCodec()
 
 
 class GetCommandHandler(CommandHandler):

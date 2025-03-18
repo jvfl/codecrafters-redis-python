@@ -4,8 +4,6 @@ from app.protocol import BulkStringCodec
 
 from ._data import Data
 
-STRING_CODEC = BulkStringCodec()
-
 
 @dataclass
 class StringData(Data):
@@ -15,4 +13,4 @@ class StringData(Data):
         return "+string\r\n".encode()
 
     def encode(self) -> bytes:
-        return STRING_CODEC.encode(self.data).encode()
+        return BulkStringCodec.encode(self.data)
