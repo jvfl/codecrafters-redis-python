@@ -4,11 +4,11 @@ from itertools import batched
 from typing import Optional, Tuple, cast
 
 from app.protocol import BulkStringCodec
-from app.storage.key_value import KeyValueStorage
 from app.storage.key_value.data_types import StreamData, StreamDataEntry
 from app.io import Writer, Reader
 
 from ._command_handler import CommandHandler
+from ._command_handler_factory import CommandHandlerFactory
 
 MIN_ID_ERROR_MSG = "-ERR The ID specified in XADD must be greater than 0-0\r\n"
 SHOULD_BE_BIGGER_ERROR_MSG = (
@@ -17,10 +17,8 @@ SHOULD_BE_BIGGER_ERROR_MSG = (
 )
 
 
+@CommandHandlerFactory.register("XADD")
 class XAddCommandHandler(CommandHandler):
-    def __init__(self, keys_storage: KeyValueStorage):
-        self.keys_storage = keys_storage
-
     async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
         key = args[0]
         stream = await self._retrieve_stream(key)
@@ -36,7 +34,7 @@ class XAddCommandHandler(CommandHandler):
         value_data = {key: value for (key, value) in batched(stream_data, 2)}
         stream.entries.append(StreamDataEntry(millis, seq_number, value_data))
 
-        await self.keys_storage.store(key, stream)
+        await self._keys_storage.store(key, stream)
         await writer.write(BulkStringCodec.encode(f"{millis}-{seq_number}"))
 
     def _process_id(self, id: str, stream: StreamData) -> Tuple[int, int]:
@@ -71,7 +69,7 @@ class XAddCommandHandler(CommandHandler):
             return last_seq_number + 1
 
     async def _retrieve_stream(self, key: str) -> StreamData:
-        data = await self.keys_storage.retrieve(key)
+        data = await self._keys_storage.retrieve(key)
 
         has_no_data_stream = data is None or not isinstance(data, StreamData)
 

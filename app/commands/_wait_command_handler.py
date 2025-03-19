@@ -2,26 +2,25 @@ import asyncio
 
 from app.io import Writer, Reader
 from app.protocol import ArrayCodec
-from app.server import RedisConfig, ReplicaConnection
+from app.server import ReplicaConnection
 
 from ._command_handler import CommandHandler
+from ._command_handler_factory import CommandHandlerFactory
 
 
+@CommandHandlerFactory.register("WAIT")
 class WaitCommandHandler(CommandHandler):
-    def __init__(self, config: RedisConfig):
-        self.config = config
-
     async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
         args[0]  # numreplicas
         timeout = int(args[1]) / 1000.0  # timeout
 
         ready_replicas: list[ReplicaConnection] = []
 
-        if self.config.master_repl_offset > 0:
+        if self._config.master_repl_offset > 0:
             try:
                 async with asyncio.timeout(timeout):
                     tasks = []
-                    for replica in self.config.replica_connections:
+                    for replica in self._config.replica_connections:
                         task = asyncio.create_task(
                             self._check_replica_readiness(replica, ready_replicas)
                         )
@@ -32,7 +31,7 @@ class WaitCommandHandler(CommandHandler):
                 print("timeout")
                 pass
         else:
-            ready_replicas.extend(self.config.replica_connections)
+            ready_replicas.extend(self._config.replica_connections)
 
         response = f":{len(ready_replicas)}\r\n"
         await writer.write(response.encode())
@@ -44,8 +43,10 @@ class WaitCommandHandler(CommandHandler):
             replica_offset = await self._get_replica_offset(
                 "REPLCONF GETACK *", replica
             )
-            print(f"Replica: {replica_offset} Master: {self.config.master_repl_offset}")
-            if replica_offset >= self.config.master_repl_offset:
+            print(
+                f"Replica: {replica_offset} Master: {self._config.master_repl_offset}"
+            )
+            if replica_offset >= self._config.master_repl_offset:
                 ready_replicas.append(replica)
                 break
 

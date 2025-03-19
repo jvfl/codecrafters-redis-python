@@ -1,14 +1,13 @@
 from app.protocol import ArrayCodec
-from app.server import RedisConfig, ReplicaConnection
+from app.server import ReplicaConnection
 from app.io import Writer, ConnectionWriter, Reader, ConnectionReader
 
 from ._command_handler import CommandHandler
+from ._command_handler_factory import CommandHandlerFactory
 
 
+@CommandHandlerFactory.register("REPLCONF")
 class ReplConfCommandHandler(CommandHandler):
-    def __init__(self, config: RedisConfig):
-        self.config = config
-
     async def handle(self, args: list[str], writer: Writer, reader: Reader) -> None:
         subcommand = args[0].upper()
 
@@ -26,7 +25,7 @@ class ReplConfCommandHandler(CommandHandler):
             reader, ConnectionReader
         ):
             connection = ReplicaConnection(writer, reader)
-            self.config.replica_connections.append(connection)
+            self._config.replica_connections.append(connection)
         await writer.write("+OK\r\n".encode())
 
     async def handle_capabilities(
@@ -35,6 +34,6 @@ class ReplConfCommandHandler(CommandHandler):
         await writer.write("+OK\r\n".encode())
 
     async def handle_getack(self, offset: str, writer: Writer) -> None:  # noqa: ARG002
-        response = ["REPLCONF", "ACK", str(self.config.replica_offset)]
+        response = ["REPLCONF", "ACK", str(self._config.replica_offset)]
 
         await writer.write(ArrayCodec.encode(response))

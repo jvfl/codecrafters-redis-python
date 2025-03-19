@@ -1,50 +1,32 @@
-from app.storage.key_value import KeyValueStorage
+from typing import Type, Callable
+
 from app.server import RedisConfig
+from app.storage.key_value import KeyValueStorage
 
 from ._command_handler import CommandHandler
-from ._set_command_handler import SetCommandHandler
-from ._ping_command_handler import PingCommandHandler
-from ._echo_command_handler import EchoCommandHandler
-from ._get_command_handler import GetCommandHandler
-from ._config_command_handler import ConfigCommandHandler
-from ._keys_command_handler import KeysCommandHandler
-from ._info_command_handler import InfoCommandHandler
-from ._replconf_command_handler import ReplConfCommandHandler
-from ._psync_command_handler import PsyncCommandHandler
-from ._wait_command_handler import WaitCommandHandler
-from ._type_command_handler import TypeCommandHandler
-from ._xadd_command_handler import XAddCommandHandler
 
 
 class CommandHandlerFactory:
+    registry: dict[str, Type[CommandHandler]] = {}
+
     def __init__(self, keys_storage: KeyValueStorage, config: RedisConfig) -> None:
         self.keys_storage = keys_storage
         self.config = config
 
-    def create(self, command: str) -> CommandHandler:
-        if command == "ECHO":
-            return EchoCommandHandler()
-        elif command == "GET":
-            return GetCommandHandler(self.keys_storage)
-        elif command == "SET":
-            return SetCommandHandler(self.keys_storage)
-        elif command == "PING":
-            return PingCommandHandler()
-        elif command == "CONFIG":
-            return ConfigCommandHandler(self.config)
-        elif command == "KEYS":
-            return KeysCommandHandler(self.keys_storage)
-        elif command == "INFO":
-            return InfoCommandHandler(self.config)
-        elif command == "REPLCONF":
-            return ReplConfCommandHandler(self.config)
-        elif command == "PSYNC":
-            return PsyncCommandHandler(self.config)
-        elif command == "WAIT":
-            return WaitCommandHandler(self.config)
-        elif command == "TYPE":
-            return TypeCommandHandler(self.keys_storage)
-        elif command == "XADD":
-            return XAddCommandHandler(self.keys_storage)
+    # Based on https://medium.com/@geoffreykoh/implementing-the-factory-pattern-via-dynamic-registry-and-python-decorators-479fc1537bbe # noqa
+    @classmethod
+    def register(cls, key: str) -> Callable[[Type[CommandHandler]], None]:
+        def inner_wrapper(command: Type[CommandHandler]) -> None:
+            if key in cls.registry:
+                print(f"CommandHandler for {key} already exists. Will replace it")
+            cls.registry[key] = command
+
+        return inner_wrapper
+
+    def create(self, command_key: str) -> CommandHandler:
+        command = CommandHandlerFactory.registry.get(command_key)
+
+        if command is None:
+            raise NotImplementedError(f"Command {command_key} is not supported")
         else:
-            raise NotImplementedError(f"Command {command} is not supported")
+            return command(self.config, self.keys_storage)

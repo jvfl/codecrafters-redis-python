@@ -1,16 +1,14 @@
-from app.io import Writer, Reader
 from dataclasses import asdict
 
-from app.server import RedisConfig
+from app.io import Writer, Reader
 from app.protocol import ArrayCodec
 
 from ._command_handler import CommandHandler
+from ._command_handler_factory import CommandHandlerFactory
 
 
+@CommandHandlerFactory.register("CONFIG")
 class ConfigCommandHandler(CommandHandler):
-    def __init__(self, config: RedisConfig):
-        self.config = asdict(config)
-
     async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
         subcommand = args[0]
 
@@ -20,5 +18,5 @@ class ConfigCommandHandler(CommandHandler):
     async def handle_get(self, args: list[str], writer: Writer) -> None:
         config_key = args[0]
 
-        response = ArrayCodec.encode([config_key, self.config[config_key]])
+        response = ArrayCodec.encode([config_key, asdict(self._config)[config_key]])
         await writer.write(response)
