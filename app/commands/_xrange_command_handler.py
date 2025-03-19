@@ -1,3 +1,5 @@
+import math
+
 from typing import Any
 
 from app.protocol import ArrayCodec
@@ -48,7 +50,9 @@ class XRangeCommandHandler(CommandHandler):
         if start != "-":
             start_millis, start_seq_number = [int(raw) for raw in start.split("-")]
 
-        end_millis, end_seq_number = [int(raw) for raw in end.split("-")]
+        end_millis, end_seq_number = [math.inf, math.inf]
+        if end != "+":
+            end_millis, end_seq_number = [int(raw) for raw in end.split("-")]
 
         return (
             entry.millis >= start_millis
