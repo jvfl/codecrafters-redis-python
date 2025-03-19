@@ -44,7 +44,10 @@ class XRangeCommandHandler(CommandHandler):
         return output
 
     def in_range(self, entry: StreamDataEntry, start: str, end: str) -> bool:
-        start_millis, start_seq_number = [int(raw) for raw in start.split("-")]
+        start_millis, start_seq_number = [0, 0]
+        if start != "-":
+            start_millis, start_seq_number = [int(raw) for raw in start.split("-")]
+
         end_millis, end_seq_number = [int(raw) for raw in end.split("-")]
 
         return (
