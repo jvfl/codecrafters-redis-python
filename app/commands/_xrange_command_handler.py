@@ -1,7 +1,5 @@
 import math
 
-from typing import Any
-
 from app.protocol import ArrayCodec
 from app.storage.key_value.data_types import StreamData, StreamDataEntry
 from app.io import Writer, Reader
@@ -24,24 +22,9 @@ class XRangeCommandHandler(CommandHandler):
             return
 
         entries = [entry for entry in data.entries if self.in_range(entry, start, end)]
-        response = [
-            [
-                f"{entry.millis}-{entry.seq_number}",
-                self.to_list(entry.data),
-            ]
-            for entry in entries
-        ]
+        response = [entry.to_list() for entry in entries]
 
         await writer.write(ArrayCodec.encode(response))
-
-    def to_list(self, data: dict[str, Any]) -> list[Any]:
-        output = []
-
-        for key, val in data.items():
-            output.append(key)
-            output.append(val)
-
-        return output
 
     def in_range(self, entry: StreamDataEntry, start: str, end: str) -> bool:
         start_millis, start_seq_number = [0, 0]

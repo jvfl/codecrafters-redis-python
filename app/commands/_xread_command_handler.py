@@ -1,6 +1,8 @@
+import asyncio
+
 from typing import Any
 
-from app.protocol import ArrayCodec
+from app.protocol import ArrayCodec, BulkStringCodec
 from app.storage.key_value.data_types import StreamData, StreamDataEntry
 from app.io import Writer, Reader
 
@@ -11,35 +13,51 @@ from ._command_handler_factory import CommandHandlerFactory
 @CommandHandlerFactory.register("XREAD")
 class XRangeCommandHandler(CommandHandler):
     async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
-        args[0]  # options
-        key = args[1]
-        start = args[2]
+        options = args[0]
 
-        data = await self._keys_storage.retrieve(key)
+        stream_refs_start = 1
+        block_timeout = 0.0
+        if options == "block":
+            block_timeout = int(args[1]) / 1000.0
+            stream_refs_start = 3
 
-        if data is None or not isinstance(data, StreamData):
-            await writer.write(ArrayCodec.encode([]))
-            return
+        stream_refs = args[stream_refs_start:]
+        midpoint = len(stream_refs) // 2
+        keys = stream_refs[0:midpoint]
+        ids = stream_refs[midpoint:]
 
-        entries = [entry for entry in data.entries if self.in_range(entry, start)]
-        response = [
-            [
-                f"{entry.millis}-{entry.seq_number}",
-                self.to_list(entry.data),
-            ]
-            for entry in entries
-        ]
+        response = await self._read_keys(keys, ids)
 
-        await writer.write(ArrayCodec.encode([[key, response]]))
+        if block_timeout > 0.0 and len(response) == 0:
+            try:
+                async with asyncio.timeout(block_timeout):
+                    while len(response) == 0:
+                        response = await self._read_keys(keys, ids)
+                        await asyncio.sleep(block_timeout / 10)
+            except asyncio.TimeoutError:
+                await writer.write(BulkStringCodec.encode(data=None))
+                return
 
-    def to_list(self, data: dict[str, Any]) -> list[Any]:
-        output = []
+        await writer.write(ArrayCodec.encode(response))
 
-        for key, val in data.items():
-            output.append(key)
-            output.append(val)
+    async def _read_keys(self, keys: list[str], ids: list[str]) -> list[Any]:
+        response = []
+        for key, start in zip(keys, ids):
+            data = await self._keys_storage.retrieve(key)
 
-        return output
+            if data is None or not isinstance(data, StreamData):
+                return []
+
+            entries = [entry for entry in data.entries if self.in_range(entry, start)]
+            if len(entries) > 0:
+                response.append(
+                    [
+                        key,
+                        [entry.to_list() for entry in entries],
+                    ]
+                )
+
+        return response
 
     def in_range(self, entry: StreamDataEntry, start: str) -> bool:
         start_millis, start_seq_number = [0, 0]
