@@ -18,7 +18,7 @@ class CommandHandlerFactory:
     def register(cls, key: str) -> Callable[[Type[CommandHandler]], None]:
         def inner_wrapper(command: Type[CommandHandler]) -> None:
             if key in cls.registry:
-                print(f"CommandHandler for {key} already exists. Will replace it")
+                raise ValueError(f"CommandHandler for {key} already exists.")
             cls.registry[key] = command
 
         return inner_wrapper
