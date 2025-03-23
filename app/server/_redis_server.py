@@ -82,7 +82,7 @@ class RedisServer:
             args = commandAndArgs[1:]
 
             queue = self.config.transaction_mode.get(connection_manager.id)
-            if queue is not None and command != "EXEC":
+            if queue is not None and command != "EXEC" and command != "DISCARD":
                 queue.append(commandAndArgs)
                 writer.write("+QUEUED\r\n".encode())
             elif queue is not None and command == "EXEC":
@@ -98,9 +98,7 @@ class RedisServer:
 
                 writer.write(ArrayCodec.encode(responses))
 
-                await self.command_factory.create(command).handle(
-                    args, connection_manager
-                )
+                await self.command_factory.create("EXEC").handle([], connection_manager)
             else:
                 response = await self.command_factory.create(command).handle(
                     args, connection_manager
