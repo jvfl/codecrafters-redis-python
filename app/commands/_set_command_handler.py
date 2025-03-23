@@ -1,6 +1,7 @@
 from app.storage.key_value.data_types import StringData
 
-from app.io import Writer, Reader
+from app.io import ConnectionManager
+from app.protocol import Resp2Data, SimpleError, SimpleString
 
 from ._command_handler import CommandHandler
 from ._command_handler_factory import CommandHandlerFactory
@@ -8,7 +9,7 @@ from ._command_handler_factory import CommandHandlerFactory
 
 @CommandHandlerFactory.register("SET")
 class SetCommandHandler(CommandHandler):
-    async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
+    async def handle(self, args: list[str], _: ConnectionManager) -> Resp2Data:
         key = args[0]
         value = StringData(args[1])
 
@@ -18,8 +19,8 @@ class SetCommandHandler(CommandHandler):
                 px_value = int(args[3])
                 await self._keys_storage.storeWithExpiration(key, value, px_value)
             except (ValueError, IndexError):
-                await writer.write("-ERR Invalid PX value\r\n".encode())
+                return SimpleError("Invalid PX value")
         else:
             await self._keys_storage.store(key, value)
 
-        await writer.write("+OK\r\n".encode())
+        return SimpleString.OK()

@@ -1,5 +1,5 @@
-from app.io import Writer, Reader
-from app.protocol import BulkStringCodec
+from app.io import ConnectionManager
+from app.protocol import Resp2Data, BulkString
 
 from ._command_handler import CommandHandler
 from ._command_handler_factory import CommandHandlerFactory
@@ -7,14 +7,15 @@ from ._command_handler_factory import CommandHandlerFactory
 
 @CommandHandlerFactory.register("INFO")
 class InfoCommandHandler(CommandHandler):
-    async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
+    async def handle(self, args: list[str], _: ConnectionManager) -> Resp2Data:
         subcommand = args[0].upper()
 
         if subcommand == "REPLICATION":
-            await self.handle_replication(writer)
+            return await self.handle_replication()
 
-    async def handle_replication(self, writer: Writer) -> None:
+        return BulkString(None)
 
+    async def handle_replication(self) -> Resp2Data:
         replication_info = ["# Replication"]
 
         role = "master"
@@ -29,5 +30,4 @@ class InfoCommandHandler(CommandHandler):
                 f"master_repl_offset:{self._config.master_repl_offset}"
             )
 
-        response = BulkStringCodec.encode("\r\n".join(replication_info) + "\r\n")
-        await writer.write(response)
+        return BulkString("\r\n".join(replication_info) + "\r\n")

@@ -9,8 +9,8 @@ from ._data import Data
 class StringData(Data):
     data: str
 
-    def type(self) -> bytes:
-        return "+string\r\n".encode()
+    def type(self) -> str:
+        return "string"
 
     def encode(self) -> bytes:
         return BulkStringCodec.encode(self.data)

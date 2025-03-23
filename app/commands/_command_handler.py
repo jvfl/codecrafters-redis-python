@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 
-from app.io import Writer, Reader
+from app.io import ConnectionManager
 from app.server import RedisConfig
 from app.storage.key_value import KeyValueStorage
+from app.protocol import Resp2Data
 
 
 class CommandHandler(ABC):
@@ -11,5 +12,5 @@ class CommandHandler(ABC):
         self._keys_storage = keys_storage
 
     @abstractmethod
-    async def handle(self, args: list[str], writer: Writer, reader: Reader) -> None:
+    async def handle(self, args: list[str], connection: ConnectionManager) -> Resp2Data:
         raise NotImplementedError

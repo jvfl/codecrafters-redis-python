@@ -3,23 +3,22 @@ import time
 from itertools import batched
 from typing import Optional, Tuple, cast
 
-from app.protocol import BulkStringCodec
+from app.protocol import Resp2Data, SimpleError, BulkString
 from app.storage.key_value.data_types import StreamData, StreamDataEntry
-from app.io import Writer, Reader
+from app.io import ConnectionManager
 
 from ._command_handler import CommandHandler
 from ._command_handler_factory import CommandHandlerFactory
 
-MIN_ID_ERROR_MSG = "-ERR The ID specified in XADD must be greater than 0-0\r\n"
+MIN_ID_ERROR_MSG = "The ID specified in XADD must be greater than 0-0"
 SHOULD_BE_BIGGER_ERROR_MSG = (
-    "-ERR The ID specified in XADD is equal or smaller than"
-    " the target stream top item\r\n"
+    "The ID specified in XADD is equal or smaller than the target stream top item"
 )
 
 
 @CommandHandlerFactory.register("XADD")
 class XAddCommandHandler(CommandHandler):
-    async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
+    async def handle(self, args: list[str], _: ConnectionManager) -> Resp2Data:
         key = args[0]
         stream = await self._retrieve_stream(key)
 
@@ -27,15 +26,15 @@ class XAddCommandHandler(CommandHandler):
         millis, seq_number = self._process_id(id, stream)
 
         if error := self._validate_id(stream, millis, seq_number):
-            await writer.write(error.encode())
-            return
+            return SimpleError(error)
 
         stream_data = args[2:]
         value_data = {key: value for (key, value) in batched(stream_data, 2)}
-        stream.entries.append(StreamDataEntry(millis, seq_number, value_data))
+        entry = StreamDataEntry(millis, seq_number, value_data)
+        stream.entries.append(entry)
 
         await self._keys_storage.store(key, stream)
-        await writer.write(BulkStringCodec.encode(f"{millis}-{seq_number}"))
+        return BulkString(entry.formatted_id())
 
     def _process_id(self, id: str, stream: StreamData) -> Tuple[int, int]:
         if id == "*":

@@ -14,7 +14,7 @@ from app.storage.key_value.data_types import StringData
 from app.storage.rdb import RDBReader, RDBData
 from app.commands import CommandHandlerFactory
 from app.protocol import ArrayCodec
-from app.io import ConnectionWriter, ConnectionReader
+from app.io import ConnectionWriter, ConnectionReader, ConnectionManager
 
 
 @dataclass
@@ -64,8 +64,9 @@ class RedisServer:
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ) -> None:
-        connection_writer = ConnectionWriter(writer)
-        connection_reader = ConnectionReader(reader)
+        connection_manager = ConnectionManager(
+            ConnectionReader(reader), ConnectionWriter(writer)
+        )
         while True:
             command_bytes = await reader.read(100)
             raw_command = command_bytes.decode()
@@ -84,9 +85,14 @@ class RedisServer:
                 self.config.transaction_mode.append(commandAndArgs)
                 writer.write("+QUEUED\r\n".encode())
             else:
-                await self.command_factory.create(command).handle(
-                    args, connection_writer, connection_reader
+                response = await self.command_factory.create(command).handle(
+                    args, connection_manager
                 )
+
+                if command != "PSYNC":
+                    await connection_manager.writer.write(
+                        response.resp2_encoded_string().encode()
+                    )
 
                 if command == "SET":
                     for conn in self.config.replica_connections:

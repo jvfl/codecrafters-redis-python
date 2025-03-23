@@ -3,21 +3,17 @@ import math
 
 from typing import Any
 
-from app.protocol import ArrayCodec, BulkStringCodec
+from app.protocol import Resp2Data, Array, BulkString
 from app.storage.key_value.data_types import StreamData, StreamDataEntry
-from app.io import Writer, Reader
+from app.io import ConnectionManager
 
 from ._command_handler import CommandHandler
 from ._command_handler_factory import CommandHandlerFactory
 
-WRONGTYPE_ERROR_MSG = (
-    "-ERR WRONGTYPE Operation against a key holding the wrong kind of value\r\n"
-)
-
 
 @CommandHandlerFactory.register("XREAD")
 class XReadCommandHandler(CommandHandler):
-    async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
+    async def handle(self, args: list[str], _: ConnectionManager) -> Resp2Data:
         options = args[0]
 
         stream_refs_start = 1
@@ -34,7 +30,7 @@ class XReadCommandHandler(CommandHandler):
         ids = stream_refs[midpoint:]
 
         latest_ids: dict[str, str] = {}
-        response = await self._read_keys(writer, keys, ids, latest_ids)
+        response = await self._read_keys(keys, ids, latest_ids)
 
         if options == "block" and len(response) == 0:
             if block_timeout == 0.0:
@@ -43,17 +39,15 @@ class XReadCommandHandler(CommandHandler):
             try:
                 async with asyncio.timeout(block_timeout):
                     while len(response) == 0:
-                        response = await self._read_keys(writer, keys, ids, latest_ids)
+                        response = await self._read_keys(keys, ids, latest_ids)
                         await asyncio.sleep(check_interval)
             except asyncio.TimeoutError:
-                await writer.write(BulkStringCodec.encode(data=None))
-                return
+                return BulkString(None)
 
-        await writer.write(ArrayCodec.encode(response))
+        return Array(response)
 
     async def _read_keys(
         self,
-        writer: Writer,
         keys: list[str],
         ids: list[str],
         latest_ids: dict[str, str],
@@ -66,7 +60,6 @@ class XReadCommandHandler(CommandHandler):
                 return []
 
             if not isinstance(data, StreamData):
-                await writer.write(WRONGTYPE_ERROR_MSG.encode())
                 raise ValueError()
 
             if start == "$":

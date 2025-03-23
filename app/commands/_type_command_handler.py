@@ -1,4 +1,5 @@
-from app.io import Writer, Reader
+from app.io import ConnectionManager
+from app.protocol import Resp2Data, SimpleString
 
 from ._command_handler import CommandHandler
 from ._command_handler_factory import CommandHandlerFactory
@@ -6,12 +7,12 @@ from ._command_handler_factory import CommandHandlerFactory
 
 @CommandHandlerFactory.register("TYPE")
 class TypeCommandHandler(CommandHandler):
-    async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
+    async def handle(self, args: list[str], _: ConnectionManager) -> Resp2Data:
         key = args[0]
 
         value = await self._keys_storage.retrieve(key)
 
         if value:
-            await writer.write(value.type())
+            return SimpleString(value.type())
         else:
-            await writer.write("+none\r\n".encode())
+            return SimpleString("none")

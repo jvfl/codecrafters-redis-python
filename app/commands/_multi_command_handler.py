@@ -1,4 +1,5 @@
-from app.io import Writer, Reader
+from app.io import ConnectionManager
+from app.protocol import Resp2Data, SimpleString
 
 from ._command_handler import CommandHandler
 from ._command_handler_factory import CommandHandlerFactory
@@ -6,6 +7,6 @@ from ._command_handler_factory import CommandHandlerFactory
 
 @CommandHandlerFactory.register("MULTI")
 class MultiCommandHandler(CommandHandler):
-    async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
+    async def handle(self, _: list[str], __: ConnectionManager) -> Resp2Data:
         self._config.transaction_mode = []
-        await writer.write("+OK\r\n".encode())
+        return SimpleString.OK()

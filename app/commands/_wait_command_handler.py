@@ -1,7 +1,7 @@
 import asyncio
 
-from app.io import Writer, Reader
-from app.protocol import ArrayCodec
+from app.io import ConnectionManager
+from app.protocol import Resp2Data, Integer, ArrayCodec
 from app.server import ReplicaConnection
 
 from ._command_handler import CommandHandler
@@ -10,7 +10,7 @@ from ._command_handler_factory import CommandHandlerFactory
 
 @CommandHandlerFactory.register("WAIT")
 class WaitCommandHandler(CommandHandler):
-    async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
+    async def handle(self, args: list[str], _: ConnectionManager) -> Resp2Data:
         args[0]  # numreplicas
         timeout = int(args[1]) / 1000.0  # timeout
 
@@ -33,8 +33,7 @@ class WaitCommandHandler(CommandHandler):
         else:
             ready_replicas.extend(self._config.replica_connections)
 
-        response = f":{len(ready_replicas)}\r\n"
-        await writer.write(response.encode())
+        return Integer(len(ready_replicas))
 
     async def _check_replica_readiness(
         self, replica: ReplicaConnection, ready_replicas: list[ReplicaConnection]

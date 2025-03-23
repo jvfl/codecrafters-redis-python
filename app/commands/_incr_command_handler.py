@@ -1,5 +1,6 @@
-from app.io import Writer, Reader
+from app.io import ConnectionManager
 from app.storage.key_value.data_types import StringData
+from app.protocol import Resp2Data, BulkString, SimpleError, Integer
 
 from ._command_handler import CommandHandler
 from ._command_handler_factory import CommandHandlerFactory
@@ -7,25 +8,23 @@ from ._command_handler_factory import CommandHandlerFactory
 
 @CommandHandlerFactory.register("INCR")
 class IncrCommandHandler(CommandHandler):
-    async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
+    async def handle(self, args: list[str], _: ConnectionManager) -> Resp2Data:
         key = args[0]
 
         value = await self._keys_storage.retrieve(key)
 
         if value is None:
-            await self._increment_and_store(key, 0, writer)
+            return await self._increment_and_store(key, 0)
         elif value and isinstance(value, StringData):
             try:
                 int_value = int(value.data)
-                await self._increment_and_store(key, int_value, writer)
+                return await self._increment_and_store(key, int_value)
             except ValueError:
-                await writer.write(
-                    "-ERR value is not an integer or out of range\r\n".encode()
-                )
+                return SimpleError("value is not an integer or out of range")
         else:
-            await writer.write("$-1\r\n".encode())
+            return BulkString(None)
 
-    async def _increment_and_store(self, key: str, value: int, writer: Writer) -> None:
+    async def _increment_and_store(self, key: str, value: int) -> Resp2Data:
         incremented_value = value + 1
         await self._keys_storage.store(key, StringData(data=f"{incremented_value}"))
-        await writer.write(f":{incremented_value}\r\n".encode())
+        return Integer(incremented_value)

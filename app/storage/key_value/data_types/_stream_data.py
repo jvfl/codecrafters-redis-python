@@ -8,8 +8,8 @@ from ._stream_data_entry import StreamDataEntry
 class StreamData(Data):
     entries: list[StreamDataEntry]
 
-    def type(self) -> bytes:
-        return "+stream\r\n".encode()
+    def type(self) -> str:
+        return "stream"
 
     def encode(self) -> bytes:
         return "".encode()

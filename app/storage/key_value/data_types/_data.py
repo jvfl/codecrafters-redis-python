@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 class Data(ABC):
     @abstractmethod
-    def type(self) -> bytes:
+    def type(self) -> str:
         raise NotImplementedError
 
     @abstractmethod

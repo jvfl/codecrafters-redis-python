@@ -4,7 +4,13 @@ from dataclasses import dataclass, field
 
 from app.protocol._array_codec import ArrayCodec
 from app.commands import CommandHandlerFactory
-from app.io import ConnectionWriter, NoOpWriter, Writer, ConnectionReader
+from app.io import (
+    ConnectionWriter,
+    NoOpWriter,
+    Writer,
+    ConnectionReader,
+    ConnectionManager,
+)
 
 from ._redis_config import RedisConfig
 from ._redis_node_info import RedisNodeInfo
@@ -76,7 +82,12 @@ class RedisSyncManager:
                 if command == "REPLCONF":
                     writer = ConnectionWriter(self.writer)
 
-                await handler.handle(args, writer, ConnectionReader(self.reader))
+                response = await handler.handle(
+                    args, ConnectionManager(ConnectionReader(self.reader), writer)
+                )
+
+                await writer.write(response.resp2_encoded_string().encode())
+
                 self.config.replica_offset += len(ArrayCodec.encode(commandAndArgs))
 
     async def _send_command(self, command: str) -> None:
