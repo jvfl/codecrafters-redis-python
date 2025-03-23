@@ -85,6 +85,22 @@ class RedisServer:
             if queue is not None and command != "EXEC":
                 queue.append(commandAndArgs)
                 writer.write("+QUEUED\r\n".encode())
+            elif queue is not None and command == "EXEC":
+                responses = []
+                for commandAndArgs in queue:
+                    command = commandAndArgs[0].upper()
+                    args = commandAndArgs[1:]
+
+                    response = await self.command_factory.create(command).handle(
+                        args, connection_manager
+                    )
+                    responses.append(response)
+
+                writer.write(ArrayCodec.encode(responses))
+
+                await self.command_factory.create(command).handle(
+                    args, connection_manager
+                )
             else:
                 response = await self.command_factory.create(command).handle(
                     args, connection_manager

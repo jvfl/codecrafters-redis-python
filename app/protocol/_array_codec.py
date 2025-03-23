@@ -1,6 +1,7 @@
-from ._bulk_string_codec import BulkStringCodec
-
 from typing import Any, cast
+
+from ._bulk_string_codec import BulkStringCodec
+from ._resp2_data import Resp2Data
 
 
 class ArrayCodec:
@@ -40,6 +41,8 @@ class ArrayCodec:
                 acc.append(ArrayCodec.encode(element).decode().removesuffix("\r\n"))
             elif isinstance(element, str):
                 acc.append(f"${len(element)}\r\n{element}")
+            elif isinstance(element, Resp2Data):
+                acc.append(element.resp2_encoded_string().removesuffix("\r\n"))
 
         return ("\r\n".join(acc) + "\r\n").encode()
 
