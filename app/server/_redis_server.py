@@ -64,6 +64,8 @@ class RedisServer:
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ) -> None:
+        connection_writer = ConnectionWriter(writer)
+        connection_reader = ConnectionReader(reader)
         while True:
             command_bytes = await reader.read(100)
             raw_command = command_bytes.decode()
@@ -78,16 +80,22 @@ class RedisServer:
             command = commandAndArgs[0].upper()
             args = commandAndArgs[1:]
 
-            await self.command_factory.create(command).handle(
-                args, ConnectionWriter(writer), ConnectionReader(reader)
-            )
+            if self.config.transaction_mode:
+                self.config.transaction_mode.append(commandAndArgs)
+                writer.write("+QUEUED\r\n".encode())
+            else:
+                await self.command_factory.create(command).handle(
+                    args, connection_writer, connection_reader
+                )
 
-            if command == "SET":
-                for conn in self.config.replica_connections:
-                    await conn.writer.write(command_bytes)
-                self.config.master_repl_offset += len(ArrayCodec.encode(commandAndArgs))
-            elif command == "PSYNC":
-                break
+                if command == "SET":
+                    for conn in self.config.replica_connections:
+                        await conn.writer.write(command_bytes)
+                    self.config.master_repl_offset += len(
+                        ArrayCodec.encode(commandAndArgs)
+                    )
+                elif command == "PSYNC":
+                    break
 
     async def sync_with_master(self) -> None:
         if self.sync_manager:
