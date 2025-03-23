@@ -12,9 +12,14 @@ class IncrCommandHandler(CommandHandler):
 
         value = await self._keys_storage.retrieve(key)
 
-        if value and isinstance(value, StringData):
-            incremented_value = int(value.data) + 1
-            await self._keys_storage.store(key, StringData(data=f"{incremented_value}"))
-            await writer.write(f":{incremented_value}\r\n".encode())
+        if value is None:
+            await self._increment_and_store(key, 0, writer)
+        elif value and isinstance(value, StringData):
+            await self._increment_and_store(key, int(value.data), writer)
         else:
             await writer.write("$-1\r\n".encode())
+
+    async def _increment_and_store(self, key: str, value: int, writer: Writer) -> None:
+        incremented_value = value + 1
+        await self._keys_storage.store(key, StringData(data=f"{incremented_value}"))
+        await writer.write(f":{incremented_value}\r\n".encode())
