@@ -1,60 +1,105 @@
-[![progress-banner](https://backend.codecrafters.io/progress/redis/dfa44377-d2ae-41e2-8f80-8cb120578570)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
+# Codecrafters Redis Server
 
-This is a starting point for Python solutions to the
-["Build Your Own Redis" Challenge](https://codecrafters.io/challenges/redis).
+A simplified `redis-server` implementation written in Python according to the challenges posed in ["Build Your Own Redis"](https://codecrafters.io/challenges/redis).
 
-In this challenge, you'll build a toy Redis clone that's capable of handling
-basic commands like `PING`, `SET` and `GET`. Along the way we'll learn about
-event loops, the Redis protocol and more.
+It should be compatible with `redis-cli` for all commands and features listed below.
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+## Supported Commands and Features
 
-# Passing the first stage
+### Commands
 
-The entry point for your Redis implementation is in `app/main.py`. Study and
-uncomment the relevant code, and push your changes to pass the first stage:
+- `CONFIG GET`
+  - Retrieves the value of a configuration parameter.
+
+- `DISCARD`
+  - Discards all commands issued after `MULTI`.
+
+- `ECHO`
+  - Responds with the same message that was sent.
+
+- `EXEC`
+  - Executes all commands issued after `MULTI`.
+  - Requires `MULTI` to be issued first.
+
+- `GET`
+  - Gets the value of a key.
+
+- `INCR`
+  - Increments the integer value of a key by one.
+
+- `INFO`
+  - Provides information and statistics about the server.
+  - Supports the `REPLICATION` section.
+
+- `KEYS`
+  - Returns all keys that match the pattern given as an arg.
+
+- `MULTI`
+  - Marks the start of a transaction block.
+
+- `PING`
+  - Responds with `PONG`.
+
+- `PSYNC`
+  - Part of the replication protocol.
+  - Responds with `+FULLRESYNC` and sends an RDB file.
+
+- `REPLCONF`
+  - Configures replication settings.
+  - Supports simplified `LISTENING-PORT`, `CAPA`, and `GETACK` subcommands.
+
+- `SET`
+  - Sets the value of a key.
+  - Supports expiration with the `PX` option.
+  - Other options aren't supported.
+
+- `TYPE`
+  - Returns the type of the value stored at the key.
+
+- `WAIT`
+  - Waits for the specified number of replicas to acknowledge writes.
+
+- `XADD`
+  - Appends a new entry to a stream.
+
+- `XRANGE`
+  - Returns a range of entries from a stream.
+
+- `XREAD`
+  - Reads entries from multiple streams given a set of keys and ids.
+  - Supports blocking read until new info is written.
+
+### Features
+
+- **RESP2**
+  - All communication with redis-cli is done according to Redis serialization protocol (RESP), specifically version 2
+
+- **Replication**
+  - Supports master-slave replication.
+  - Handles full resynchronization with `PSYNC`.
+  - Only propagates `SET` commands.
+
+- **Persistence**
+  - Loads data from RDB files.
+  - It only loads simple String data written with `SET` alongside their expiration.
+
+### Limitations
+
+- This implementation is a simplified version of Redis and does not support all features and edge cases of the official Redis server.
+- Performance optimizations present in the official Redis server may not be implemented.
+
+## Getting Started
+
+To run the server, use the following command:
 
 ```sh
-git commit -am "pass 1st stage" # any msg
-git push origin master
+./your_program.sh
 ```
 
-That's all!
+Then you may connect with it using a redis-cli on port `6379`.
 
-# Stage 2 & beyond
-
-Note: This section is for stages 2 and beyond.
-
-1. Ensure you have `python (3.x)` installed locally
-1. Run `./your_program.sh` to run your Redis server, which is implemented in
-   `app/main.py`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
-
-# Troubleshooting
-
-## module `socket` has no attribute `create_server`
-
-When running your server locally, you might see an error like this:
-
-```
-Traceback (most recent call last):
-  File "/.../python3.7/runpy.py", line 193, in _run_module_as_main
-    "__main__", mod_spec)
-  File "/.../python3.7/runpy.py", line 85, in _run_code
-    exec(code, run_globals)
-  File "/app/app/main.py", line 11, in <module>
-    main()
-  File "/app/app/main.py", line 6, in main
-    s = socket.create_server(("localhost", 6379), reuse_port=True)
-AttributeError: module 'socket' has no attribute 'create_server'
-```
-
-This is because `socket.create_server` was introduced in Python 3.8, and you
-might be running an older version.
-
-You can fix this by installing Python 3.8 locally and using that.
-
-If you'd like to use a different version of Python, change the `language_pack`
-value in `codecrafters.yml`.
+### Options
+  - `--dir`: The directory where the RDB file is located.
+  - `--dbfilename`: The name of the RDB file.
+  - `--port`: The port on which the server will listen (default: 6379).
+  - `--replicaof`: The host and port of the master server for replication (e.g., "127.0.0.1 6379").
