@@ -10,6 +10,10 @@ from app.io import Writer, Reader
 from ._command_handler import CommandHandler
 from ._command_handler_factory import CommandHandlerFactory
 
+WRONGTYPE_ERROR_MSG = (
+    "-ERR WRONGTYPE Operation against a key holding the wrong kind of value\r\n"
+)
+
 
 @CommandHandlerFactory.register("XREAD")
 class XReadCommandHandler(CommandHandler):
@@ -29,7 +33,8 @@ class XReadCommandHandler(CommandHandler):
         keys = stream_refs[0:midpoint]
         ids = stream_refs[midpoint:]
 
-        response = await self._read_keys(keys, ids)
+        latest_ids: dict[str, str] = {}
+        response = await self._read_keys(writer, keys, ids, latest_ids)
 
         if options == "block" and len(response) == 0:
             if block_timeout == 0.0:
@@ -38,7 +43,7 @@ class XReadCommandHandler(CommandHandler):
             try:
                 async with asyncio.timeout(block_timeout):
                     while len(response) == 0:
-                        response = await self._read_keys(keys, ids)
+                        response = await self._read_keys(writer, keys, ids, latest_ids)
                         await asyncio.sleep(check_interval)
             except asyncio.TimeoutError:
                 await writer.write(BulkStringCodec.encode(data=None))
@@ -46,13 +51,29 @@ class XReadCommandHandler(CommandHandler):
 
         await writer.write(ArrayCodec.encode(response))
 
-    async def _read_keys(self, keys: list[str], ids: list[str]) -> list[Any]:
+    async def _read_keys(
+        self,
+        writer: Writer,
+        keys: list[str],
+        ids: list[str],
+        latest_ids: dict[str, str],
+    ) -> list[Any]:
         response = []
         for key, start in zip(keys, ids):
             data = await self._keys_storage.retrieve(key)
 
-            if data is None or not isinstance(data, StreamData):
+            if data is None:
                 return []
+
+            if not isinstance(data, StreamData):
+                await writer.write(WRONGTYPE_ERROR_MSG.encode())
+                raise ValueError()
+
+            if start == "$":
+                if latest_ids.get(key) is None:
+                    latest_ids[key] = data.entries[-1].formatted_id()
+
+                start = latest_ids[key]
 
             entries = [entry for entry in data.entries if self.in_range(entry, start)]
             if len(entries) > 0:
@@ -66,8 +87,6 @@ class XReadCommandHandler(CommandHandler):
         return response
 
     def in_range(self, entry: StreamDataEntry, start: str) -> bool:
-        start_millis, start_seq_number = [0, 0]
-        if start != "-":
-            start_millis, start_seq_number = [int(raw) for raw in start.split("-")]
+        start_millis, start_seq_number = [int(raw) for raw in start.split("-")]
 
         return entry.millis >= start_millis and entry.seq_number > start_seq_number

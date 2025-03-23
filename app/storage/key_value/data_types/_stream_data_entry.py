@@ -9,6 +9,9 @@ class StreamDataEntry:
     seq_number: int
     data: dict[str, Any]
 
+    def formatted_id(self) -> str:
+        return f"{self.millis}-{self.seq_number}"
+
     def to_list(self) -> list[Any]:
         data_as_list = []
 
@@ -16,7 +19,4 @@ class StreamDataEntry:
             data_as_list.append(key)
             data_as_list.append(val)
 
-        return [
-            f"{self.millis}-{self.seq_number}",
-            data_as_list,
-        ]
+        return [self.formatted_id(), data_as_list]
