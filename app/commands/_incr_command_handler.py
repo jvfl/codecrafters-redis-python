@@ -15,7 +15,13 @@ class IncrCommandHandler(CommandHandler):
         if value is None:
             await self._increment_and_store(key, 0, writer)
         elif value and isinstance(value, StringData):
-            await self._increment_and_store(key, int(value.data), writer)
+            try:
+                int_value = int(value.data)
+                await self._increment_and_store(key, int_value, writer)
+            except ValueError:
+                await writer.write(
+                    "-ERR value is not an integer or out of range\r\n".encode()
+                )
         else:
             await writer.write("$-1\r\n".encode())
 
