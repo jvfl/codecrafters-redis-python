@@ -11,4 +11,5 @@ class ExecCommandHandler(CommandHandler):
         if self._config.transaction_mode is None:
             return SimpleError("EXEC without MULTI")
 
+        self._config.transaction_mode = None
         return Array([])
