@@ -1,4 +1,5 @@
 import asyncio
+import math
 
 from typing import Any
 
@@ -11,14 +12,16 @@ from ._command_handler_factory import CommandHandlerFactory
 
 
 @CommandHandlerFactory.register("XREAD")
-class XRangeCommandHandler(CommandHandler):
+class XReadCommandHandler(CommandHandler):
     async def handle(self, args: list[str], writer: Writer, _: Reader) -> None:
         options = args[0]
 
         stream_refs_start = 1
         block_timeout = 0.0
+        check_interval = 100.0
         if options == "block":
             block_timeout = int(args[1]) / 1000.0
+            check_interval = block_timeout / 10
             stream_refs_start = 3
 
         stream_refs = args[stream_refs_start:]
@@ -28,12 +31,15 @@ class XRangeCommandHandler(CommandHandler):
 
         response = await self._read_keys(keys, ids)
 
-        if block_timeout > 0.0 and len(response) == 0:
+        if options == "block" and len(response) == 0:
+            if block_timeout == 0.0:
+                block_timeout = math.inf
+
             try:
                 async with asyncio.timeout(block_timeout):
                     while len(response) == 0:
                         response = await self._read_keys(keys, ids)
-                        await asyncio.sleep(block_timeout / 10)
+                        await asyncio.sleep(check_interval)
             except asyncio.TimeoutError:
                 await writer.write(BulkStringCodec.encode(data=None))
                 return
