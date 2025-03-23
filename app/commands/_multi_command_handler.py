@@ -7,6 +7,6 @@ from ._command_handler_factory import CommandHandlerFactory
 
 @CommandHandlerFactory.register("MULTI")
 class MultiCommandHandler(CommandHandler):
-    async def handle(self, _: list[str], __: ConnectionManager) -> Resp2Data:
-        self._config.transaction_mode = []
+    async def handle(self, _: list[str], connection: ConnectionManager) -> Resp2Data:
+        self._config.transaction_mode[connection.id] = []
         return SimpleString.OK()

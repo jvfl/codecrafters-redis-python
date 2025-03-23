@@ -15,7 +15,9 @@ class RedisConfig:
     dir: Optional[str]
     dbfilename: Optional[str]
     master_info: Optional[RedisNodeInfo]
-    transaction_mode: Optional[list[list[str]]] = field(default=None, init=False)
+    transaction_mode: dict[str, list[list[str]]] = field(
+        default_factory=dict, init=False
+    )
     master_replid: str = field(init=False)
     master_repl_offset: int = field(default=0, init=False)
     replica_connections: list[ReplicaConnection] = field(

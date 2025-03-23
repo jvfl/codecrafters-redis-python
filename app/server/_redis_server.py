@@ -81,8 +81,9 @@ class RedisServer:
             command = commandAndArgs[0].upper()
             args = commandAndArgs[1:]
 
-            if self.config.transaction_mode:
-                self.config.transaction_mode.append(commandAndArgs)
+            queue = self.config.transaction_mode.get(connection_manager.id)
+            if queue is not None and command != "EXEC":
+                queue.append(commandAndArgs)
                 writer.write("+QUEUED\r\n".encode())
             else:
                 response = await self.command_factory.create(command).handle(
